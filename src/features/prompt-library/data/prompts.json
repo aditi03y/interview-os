@@ -1,0 +1,245 @@
+{
+  "version": "1.0.0",
+  "prompts": [
+    {
+      "id": "dsa-001",
+      "title": "Pattern Recognition Quiz",
+      "category": "DSA",
+      "description": "Learn when to apply common DSA patterns",
+      "prompt": "Act as an SDE interview coach. Give me 5 medium LeetCode-style problems one at a time. After I describe my approach, tell me which pattern applies (two pointers, sliding window, hash map, BFS, DP, etc.) and what signals in the problem statement led to that pattern.",
+      "tags": ["patterns", "interview-prep"]
+    },
+    {
+      "id": "dsa-002",
+      "title": "Complexity Analysis Drill",
+      "category": "DSA",
+      "description": "Practice Big-O analysis on code snippets",
+      "prompt": "Quiz me on time and space complexity. Present a code snippet (array, tree, or graph algorithm). I will analyze Big-O. Then evaluate my answer, explain mistakes, and show the optimal approach if mine is suboptimal.",
+      "tags": ["complexity", "big-o"]
+    },
+    {
+      "id": "dsa-003",
+      "title": "Two Pointers Deep Dive",
+      "category": "DSA",
+      "description": "Master opposite-direction and fast-slow pointers",
+      "prompt": "Explain two pointers technique with 3 variants: opposite direction (sorted array), same direction (in-place removal), and fast-slow (cycle detection). For each, give one LeetCode example, pseudocode template, and common pitfalls.",
+      "tags": ["two-pointers", "arrays"]
+    },
+    {
+      "id": "dsa-004",
+      "title": "Dynamic Programming Framework",
+      "category": "DSA",
+      "description": "Step-by-step DP problem solving",
+      "prompt": "Teach me your DP framework: (1) define state, (2) recurrence relation, (3) base cases, (4) iteration order, (5) space optimization. Then apply it to the Coin Change problem with a full walkthrough.",
+      "tags": ["dynamic-programming"]
+    },
+    {
+      "id": "dsa-005",
+      "title": "Graph Problem Mock",
+      "category": "DSA",
+      "description": "Timed graph traversal practice",
+      "prompt": "Give me a graph interview problem (BFS, DFS, topo sort, or union-find). Wait for my approach before giving hints. Evaluate my BFS/DFS choice, time/space complexity, and edge cases like disconnected graphs or cycles.",
+      "tags": ["graphs", "bfs", "dfs"]
+    },
+    {
+      "id": "os-001",
+      "title": "Process vs Thread",
+      "category": "OS",
+      "description": "Core concurrency concepts for interviews",
+      "prompt": "Explain processes vs threads vs coroutines. Cover memory isolation, context switching cost, shared memory, and when each is used in production systems. Give 3 interview follow-up questions with model answers.",
+      "tags": ["processes", "threads"]
+    },
+    {
+      "id": "os-002",
+      "title": "Deadlock Conditions",
+      "category": "OS",
+      "description": "Coffman conditions and prevention strategies",
+      "prompt": "Explain the four Coffman conditions for deadlock. For each condition, describe a prevention or avoidance strategy (mutex ordering, banker's algorithm, timeout). Include a real-world example from database or OS context.",
+      "tags": ["deadlock", "concurrency"]
+    },
+    {
+      "id": "os-003",
+      "title": "Virtual Memory Explained",
+      "category": "OS",
+      "description": "Paging, TLB, and page faults",
+      "prompt": "Explain virtual memory: paging, page tables, TLB, page faults, and demand paging. Walk through what happens on a memory access. Compare paging vs segmentation. Keep it interview-ready in under 5 minutes of reading.",
+      "tags": ["memory", "paging"]
+    },
+    {
+      "id": "os-004",
+      "title": "Scheduling Algorithms",
+      "category": "OS",
+      "description": "FCFS, SJF, Round Robin comparison",
+      "prompt": "Compare CPU scheduling algorithms: FCFS, SJF, Priority, Round Robin, MLFQ. For each, state advantages, disadvantages, starvation risk, and average wait time behavior. Give a scenario where Round Robin beats SJF.",
+      "tags": ["scheduling", "cpu"]
+    },
+    {
+      "id": "dbms-001",
+      "title": "ACID Properties",
+      "category": "DBMS",
+      "description": "Transaction fundamentals with examples",
+      "prompt": "Explain ACID properties with a bank transfer example. For each property (Atomicity, Consistency, Isolation, Durability), describe how DBMS implements it (undo logs, constraints, isolation levels, WAL). Include one failure scenario per property.",
+      "tags": ["transactions", "acid"]
+    },
+    {
+      "id": "dbms-002",
+      "title": "Indexing Deep Dive",
+      "category": "DBMS",
+      "description": "B-trees, hash indexes, and query optimization",
+      "prompt": "Explain database indexing: B-tree vs hash index vs bitmap index. When does an index help vs hurt? Cover composite indexes, leftmost prefix rule, and covering indexes. Give an example query and explain EXPLAIN plan reading.",
+      "tags": ["indexing", "performance"]
+    },
+    {
+      "id": "dbms-003",
+      "title": "Isolation Levels",
+      "category": "DBMS",
+      "description": "Read phenomena and SQL isolation",
+      "prompt": "Explain dirty read, non-repeatable read, and phantom read. Map each to SQL isolation levels (Read Uncommitted, Read Committed, Repeatable Read, Serializable). Recommend isolation level for an e-commerce inventory system.",
+      "tags": ["isolation", "concurrency"]
+    },
+    {
+      "id": "dbms-004",
+      "title": "Normalization Quiz",
+      "category": "DBMS",
+      "description": "1NF through BCNF with examples",
+      "prompt": "Teach normalization from 1NF to BCNF with a student-course-instructor example table. Show denormalized table, functional dependencies, and step-by-step decomposition. Explain when denormalization is acceptable in production.",
+      "tags": ["normalization", "schema-design"]
+    },
+    {
+      "id": "cn-001",
+      "title": "TCP vs UDP",
+      "category": "CN",
+      "description": "Transport layer protocol comparison",
+      "prompt": "Compare TCP and UDP: connection setup, reliability, ordering, flow control, congestion control, use cases. Explain TCP 3-way handshake and 4-way teardown. When would you choose UDP for a production system?",
+      "tags": ["tcp", "udp", "transport"]
+    },
+    {
+      "id": "cn-002",
+      "title": "HTTP & REST Design",
+      "category": "CN",
+      "description": "HTTP methods, status codes, REST best practices",
+      "prompt": "Explain HTTP/1.1 vs HTTP/2 vs HTTP/3 at a high level. Cover idempotent methods, status code categories, and REST API design best practices. Design REST endpoints for a todo app with proper HTTP verbs and status codes.",
+      "tags": ["http", "rest", "api"]
+    },
+    {
+      "id": "cn-003",
+      "title": "DNS Resolution Walkthrough",
+      "category": "CN",
+      "description": "What happens when you type a URL",
+      "prompt": "Walk through DNS resolution step by step when a user types https://example.com. Cover browser cache, OS cache, recursive resolver, root/TLD/authoritative nameservers. Then explain DNS caching TTL and CDN interaction.",
+      "tags": ["dns", "networking"]
+    },
+    {
+      "id": "cn-004",
+      "title": "OSI vs TCP/IP Model",
+      "category": "CN",
+      "description": "Layer-by-layer protocol mapping",
+      "prompt": "Compare OSI 7-layer and TCP/IP 4-layer models. For each layer, name key protocols and devices. Explain where SSL/TLS fits. Give one interview question per layer with a concise model answer.",
+      "tags": ["osi", "tcp-ip"]
+    },
+    {
+      "id": "oop-001",
+      "title": "SOLID Principles",
+      "category": "OOP",
+      "description": "Each principle with code examples",
+      "prompt": "Explain all 5 SOLID principles with a simple e-commerce code example for each. Show a violation and the refactored solution. Keep examples in pseudocode or TypeScript.",
+      "tags": ["solid", "design-principles"]
+    },
+    {
+      "id": "oop-002",
+      "title": "Inheritance vs Composition",
+      "category": "OOP",
+      "description": "When to favor composition over inheritance",
+      "prompt": "Explain inheritance vs composition with examples. When is inheritance appropriate vs an anti-pattern? Cover the Liskov Substitution Principle. Refactor a fragile base class hierarchy into composition.",
+      "tags": ["inheritance", "composition"]
+    },
+    {
+      "id": "oop-003",
+      "title": "Design Patterns Overview",
+      "category": "OOP",
+      "description": "Creational, structural, behavioral patterns",
+      "prompt": "Summarize 6 essential design patterns for SDE interviews: Singleton, Factory, Observer, Strategy, Decorator, and Adapter. For each, state problem solved, structure, and one real-world use case.",
+      "tags": ["design-patterns"]
+    },
+    {
+      "id": "oop-004",
+      "title": "Abstraction & Polymorphism",
+      "category": "OOP",
+      "description": "Core OOP pillars explained",
+      "prompt": "Explain the four OOP pillars: encapsulation, abstraction, inheritance, polymorphism. Use a payment processing system example. Include compile-time vs runtime polymorphism with code snippets.",
+      "tags": ["polymorphism", "abstraction"]
+    },
+    {
+      "id": "lld-001",
+      "title": "Design Parking Lot",
+      "category": "LLD",
+      "description": "Classic LLD interview problem",
+      "prompt": "Help me design a Parking Lot system (LLD). Guide me through requirements clarification, class identification, relationships, and key methods. Cover multiple vehicle types, parking spots, floors, and payment. Use UML-style class descriptions.",
+      "tags": ["parking-lot", "class-design"]
+    },
+    {
+      "id": "lld-002",
+      "title": "Design LRU Cache",
+      "category": "LLD",
+      "description": "HashMap + doubly linked list pattern",
+      "prompt": "Walk me through LLD for an LRU Cache with O(1) get and put. Identify classes, data structures, and method signatures. Explain why HashMap + Doubly Linked List works. Cover thread-safety as a follow-up.",
+      "tags": ["lru-cache", "data-structures"]
+    },
+    {
+      "id": "lld-003",
+      "title": "Design Rate Limiter",
+      "category": "LLD",
+      "description": "Token bucket and sliding window",
+      "prompt": "Guide me through designing a Rate Limiter (LLD). Compare token bucket, leaky bucket, fixed window, and sliding window. Recommend one for an API gateway. Define classes, interfaces, and configuration options.",
+      "tags": ["rate-limiter", "system-component"]
+    },
+    {
+      "id": "lld-004",
+      "title": "Design BookMyShow",
+      "category": "LLD",
+      "description": "Seat booking with concurrency",
+      "prompt": "Help me design a movie ticket booking system (BookMyShow LLD). Cover theaters, shows, seats, booking flow, and concurrent seat selection. Discuss locking strategy to prevent double booking.",
+      "tags": ["booking-system", "concurrency"]
+    },
+    {
+      "id": "behavioral-001",
+      "title": "STAR Method Coach",
+      "category": "Behavioral",
+      "description": "Structure behavioral answers effectively",
+      "prompt": "Act as a behavioral interview coach. Ask me a behavioral question (conflict, leadership, failure, or tight deadline). After I answer, evaluate my response using the STAR method and suggest improvements for clarity and impact.",
+      "tags": ["star", "interview"]
+    },
+    {
+      "id": "behavioral-002",
+      "title": "Tell Me About Yourself",
+      "category": "Behavioral",
+      "description": "Craft a compelling 2-minute pitch",
+      "prompt": "Help me craft a 2-minute 'Tell me about yourself' answer for an SDE intern role at a product company. My background: engineering student, DSA prep, 2 projects. Ask clarifying questions first, then draft and refine my pitch.",
+      "tags": ["introduction", "pitch"]
+    },
+    {
+      "id": "behavioral-003",
+      "title": "Failure & Learning Story",
+      "category": "Behavioral",
+      "description": "Turn setbacks into strong answers",
+      "prompt": "Help me prepare a 'Tell me about a failure' answer. Ask me about a real failure from academics or projects. Then shape it into a STAR response emphasizing ownership, learning, and concrete changes I made afterward.",
+      "tags": ["failure", "growth"]
+    },
+    {
+      "id": "behavioral-004",
+      "title": "Why This Company",
+      "category": "Behavioral",
+      "description": "Research-backed company fit answer",
+      "prompt": "I am interviewing at [COMPANY NAME]. Help me prepare a genuine 'Why this company?' answer. Ask me what I know about the company, then help me connect my skills, projects, and career goals to their product and culture.",
+      "tags": ["motivation", "company-research"]
+    },
+    {
+      "id": "behavioral-005",
+      "title": "Conflict Resolution Story",
+      "category": "Behavioral",
+      "description": "Team disagreement scenario prep",
+      "prompt": "Coach me on answering 'Describe a conflict with a teammate.' Ask me for a real scenario. Help me structure it with STAR, focusing on empathy, communication, and outcome — not blaming others.",
+      "tags": ["conflict", "teamwork"]
+    }
+  ]
+}

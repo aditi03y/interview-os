@@ -1,0 +1,6 @@
+export { ViolationDashboardPage } from './pages/ViolationDashboardPage'
+export { ViolationLog } from './components/ViolationLog'
+export { ProctorBanner } from './components/ProctorBanner'
+export { useAntiCheatMonitor } from './hooks/useAntiCheatMonitor'
+export { useViolations } from './hooks/useViolations'
+export type { TestViolation, ViolationEventType, ViolationSummary } from './types'

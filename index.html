@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="InterviewOS — AI-powered SDE Interview Preparation Platform" />
+    <meta name="color-scheme" content="light dark" />
+    <meta id="theme-color-meta" name="theme-color" content="#fafafa" />
+    <title>InterviewOS</title>
+    <script>
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('interviewos-theme')
+          var mode = 'system'
+          if (stored) {
+            var parsed = JSON.parse(stored)
+            mode = (parsed.state && parsed.state.mode) || parsed.mode || stored
+          }
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          var isDark = mode === 'dark' || (mode === 'system' && prefersDark) || (!stored && prefersDark)
+          if (isDark) document.documentElement.classList.add('dark')
+        } catch (_) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
