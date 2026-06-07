@@ -4,6 +4,7 @@ import { mapPostgrestError } from '@/lib/supabase/errors'
 import type { ApiResult } from '@/types'
 import { gradeAttempt } from '../lib/scoring'
 import { mapAttemptRow, mapDefinitionRow, mapQuestionRow } from '../lib/mappers'
+import { totalSectionDuration } from '../types'
 import type {
   AttemptAnswers,
   AttemptStatus,
@@ -124,7 +125,10 @@ export async function startAttempt(input: StartAttemptInput): Promise<ApiResult<
 
   const questions = questionsResult.data
   const maxScore = questions.reduce((sum, q) => sum + q.points, 0)
-  const expiresAt = new Date(Date.now() + definition.durationMinutes * 60_000).toISOString()
+  const sectionDuration = totalSectionDuration(definition.sections)
+  const durationMinutes =
+    sectionDuration > 0 ? sectionDuration : definition.durationMinutes
+  const expiresAt = new Date(Date.now() + durationMinutes * 60_000).toISOString()
 
   const { data, error } = await supabase
     .from('test_attempts')

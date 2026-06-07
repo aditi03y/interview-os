@@ -4,6 +4,7 @@ import { QuestionMcq } from './QuestionMcq'
 import { QuestionSubjective } from './QuestionSubjective'
 import { QuestionCoding } from './QuestionCoding'
 import type { AttemptAnswers, TestQuestion } from '../types'
+import type { SectionPlanItem } from '../lib/sectionPlan'
 
 interface TestTakingLayoutProps {
   title: string
@@ -15,10 +16,20 @@ interface TestTakingLayoutProps {
   remainingSeconds: number
   answeredCount: number
   submitting: boolean
+  sectionTimersEnabled?: boolean
+  currentSectionLabel?: string
+  sectionIndex?: number
+  sectionCount?: number
+  overallFormattedTime?: string
+  overallTimerProgress?: number
+  overallRemainingSeconds?: number
+  sectionPlan?: SectionPlanItem[]
+  canAdvanceSectionEarly?: boolean
   onAnswer: (questionId: string, value: string) => void
   onSelectQuestion: (index: number) => void
   onPrev: () => void
   onNext: () => void
+  onAdvanceSection?: () => void
   onSubmit: () => void
 }
 
@@ -32,10 +43,20 @@ export function TestTakingLayout({
   remainingSeconds,
   answeredCount,
   submitting,
+  sectionTimersEnabled = false,
+  currentSectionLabel,
+  sectionIndex = 0,
+  sectionCount = 1,
+  overallFormattedTime,
+  overallTimerProgress = 100,
+  overallRemainingSeconds = 0,
+  sectionPlan = [],
+  canAdvanceSectionEarly = false,
   onAnswer,
   onSelectQuestion,
   onPrev,
   onNext,
+  onAdvanceSection,
   onSubmit,
 }: TestTakingLayoutProps) {
   const question = questions[currentIndex]
@@ -43,25 +64,57 @@ export function TestTakingLayout({
 
   const answerValue = answers[question.id]?.value ?? ''
 
+  const navigableIndices = sectionTimersEnabled
+    ? (sectionPlan[sectionIndex]?.questionIndices ?? [])
+    : questions.map((_, index) => index)
+
+  const sectionStart = navigableIndices[0] ?? 0
+  const sectionEnd = navigableIndices[navigableIndices.length - 1] ?? questions.length - 1
+  const isLastQuestionInSection = currentIndex >= sectionEnd
+  const isLastQuestionOverall = currentIndex >= questions.length - 1
+  const sectionAnsweredCount = navigableIndices.filter((index) =>
+    Boolean(answers[questions[index]!.id]?.value?.trim()),
+  ).length
+
   return (
     <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-lg font-semibold">{title}</h1>
+          {sectionTimersEnabled && currentSectionLabel ? (
+            <p className="text-sm font-medium text-foreground">
+              Section {sectionIndex + 1} of {sectionCount}: {currentSectionLabel}
+            </p>
+          ) : null}
           <p className="text-sm text-muted-foreground">
-            Question {currentIndex + 1} of {questions.length} · {answeredCount} answered
+            Question {currentIndex + 1} of {questions.length}
+            {sectionTimersEnabled
+              ? ` · ${sectionAnsweredCount}/${navigableIndices.length} answered in this section`
+              : ` · ${answeredCount} answered`}
           </p>
         </div>
-        <TestTimer
-          formattedTime={formattedTime}
-          progressPercent={timerProgress}
-          isLowTime={remainingSeconds <= 300}
-        />
+        <div className="flex flex-wrap items-end justify-end gap-4">
+          {sectionTimersEnabled && overallFormattedTime ? (
+            <TestTimer
+              formattedTime={overallFormattedTime}
+              progressPercent={overallTimerProgress}
+              isLowTime={overallRemainingSeconds <= 300}
+              label="Overall time"
+            />
+          ) : null}
+          <TestTimer
+            formattedTime={formattedTime}
+            progressPercent={timerProgress}
+            isLowTime={remainingSeconds <= 300}
+            label={sectionTimersEnabled ? 'Section time' : undefined}
+          />
+        </div>
       </div>
 
       <div className="grid flex-1 gap-6 lg:grid-cols-[220px_1fr]">
         <nav className="flex flex-wrap gap-2 lg:flex-col">
-          {questions.map((q, index) => {
+          {navigableIndices.map((index) => {
+            const q = questions[index]!
             const answered = Boolean(answers[q.id]?.value?.trim())
             const active = index === currentIndex
             return (
@@ -131,17 +184,29 @@ export function TestTakingLayout({
           </div>
 
           <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
-            <Button variant="outline" onClick={onPrev} disabled={currentIndex === 0 || submitting}>
+            <Button
+              variant="outline"
+              onClick={onPrev}
+              disabled={currentIndex <= sectionStart || submitting}
+            >
               Previous
             </Button>
             <div className="flex gap-2">
-              {currentIndex < questions.length - 1 ? (
+              {!isLastQuestionInSection ? (
                 <Button onClick={onNext} disabled={submitting}>
                   Next
                 </Button>
-              ) : (
+              ) : canAdvanceSectionEarly ? (
+                <Button onClick={onAdvanceSection} disabled={submitting}>
+                  Next section
+                </Button>
+              ) : isLastQuestionOverall ? (
                 <Button onClick={onSubmit} disabled={submitting}>
                   {submitting ? 'Submitting…' : 'Submit Test'}
+                </Button>
+              ) : (
+                <Button onClick={onNext} disabled={submitting}>
+                  Next
                 </Button>
               )}
             </div>

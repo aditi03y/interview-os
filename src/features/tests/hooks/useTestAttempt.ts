@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/app/router/paths'
 import { useAuth } from '@/hooks/auth'
@@ -9,8 +9,17 @@ import {
   saveAttemptAnswers,
   submitAttempt,
 } from '../services/testService'
+import {
+  buildSectionPlan,
+  clampQuestionIndexToSection,
+  getSectionBounds,
+  shouldUseSectionTimers,
+} from '../lib/sectionPlan'
+import { clearSectionTimerState } from '../lib/sectionTimerPersistence'
+import { useSectionTestTimer } from './useSectionTestTimer'
 import { useTestTimer } from './useTestTimer'
 import type { AttemptAnswers, TestAttempt, TestQuestion } from '../types'
+import { totalSectionDuration } from '../types'
 
 export function useTestAttempt(attemptId: string | undefined) {
   const { user } = useAuth()
@@ -19,7 +28,7 @@ export function useTestAttempt(attemptId: string | undefined) {
   const [attempt, setAttempt] = useState<TestAttempt | null>(null)
   const [questions, setQuestions] = useState<TestQuestion[]>([])
   const [answers, setAnswers] = useState<AttemptAnswers>({})
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [currentIndex, setCurrentIndexRaw] = useState(0)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -30,6 +39,16 @@ export function useTestAttempt(attemptId: string | undefined) {
   useEffect(() => {
     answersRef.current = answers
   }, [answers])
+
+  const sectionPlan = useMemo(
+    () => buildSectionPlan(attempt?.definition?.sections ?? [], questions),
+    [attempt?.definition?.sections, questions],
+  )
+
+  const sectionTimersEnabled = useMemo(
+    () => shouldUseSectionTimers(attempt?.definition?.sections ?? [], sectionPlan),
+    [attempt?.definition?.sections, sectionPlan],
+  )
 
   useEffect(() => {
     if (!user || !attemptId) return
@@ -99,6 +118,8 @@ export function useTestAttempt(attemptId: string | undefined) {
         return
       }
 
+      clearSectionTimerState(attempt.id)
+
       toast.success(
         autoSubmitted ? 'Test auto-submitted — time expired.' : 'Test submitted successfully.',
         'Submission complete',
@@ -108,20 +129,74 @@ export function useTestAttempt(attemptId: string | undefined) {
     [attempt, navigate, questions, submitting],
   )
 
-  const handleExpire = useCallback(() => {
-    void doSubmit(true)
+  const doSubmitRef = useRef(doSubmit)
+  useEffect(() => {
+    doSubmitRef.current = doSubmit
   }, [doSubmit])
 
-  const totalDurationSeconds = attempt?.definition?.durationMinutes
-    ? attempt.definition.durationMinutes * 60
-    : 3600
+  const handleOverallExpire = useCallback(() => {
+    void doSubmitRef.current(true)
+  }, [])
 
-  const { formattedTime, remainingSeconds, progressPercent, isExpired } = useTestTimer({
+  const totalDurationSeconds = useMemo(() => {
+    const sections = attempt?.definition?.sections ?? []
+    const sectionDuration = totalSectionDuration(sections)
+    const minutes =
+      sectionDuration > 0 ? sectionDuration : (attempt?.definition?.durationMinutes ?? 60)
+    return minutes * 60
+  }, [attempt?.definition?.durationMinutes, attempt?.definition?.sections])
+
+  const overallTimer = useTestTimer({
     expiresAt: attempt?.expiresAt ?? new Date(0).toISOString(),
     enabled: Boolean(attempt?.status === 'in_progress'),
-    onExpire: handleExpire,
+    onExpire: handleOverallExpire,
     totalSeconds: totalDurationSeconds,
   })
+
+  const handleSectionChange = useCallback(
+    (nextSectionIndex: number) => {
+      const bounds = getSectionBounds(sectionPlan, nextSectionIndex)
+      setCurrentIndexRaw(bounds.start)
+      const label = sectionPlan[nextSectionIndex]?.section.label ?? 'Next section'
+      toast.info(`Time's up for the previous section. Starting: ${label}.`, 'Section change')
+    },
+    [sectionPlan],
+  )
+
+  const handleSectionSync = useCallback(
+    (sectionIndex: number) => {
+      const bounds = getSectionBounds(sectionPlan, sectionIndex)
+      setCurrentIndexRaw(bounds.start)
+    },
+    [sectionPlan],
+  )
+
+  const handleAllSectionsExpire = useCallback(() => {
+    toast.info('All section timers ended. Submitting your test.', 'Time expired')
+    void doSubmitRef.current(true)
+  }, [])
+
+  const sectionTimer = useSectionTestTimer({
+    attemptId,
+    plan: sectionPlan,
+    enabled: sectionTimersEnabled && Boolean(attempt?.status === 'in_progress'),
+    onSectionExpire: handleSectionChange,
+    onSectionSync: handleSectionSync,
+    onAllSectionsExpire: handleAllSectionsExpire,
+  })
+
+  const setCurrentIndex = useCallback(
+    (index: number) => {
+      if (!sectionTimersEnabled) {
+        setCurrentIndexRaw(index)
+        return
+      }
+      setCurrentIndexRaw(
+        clampQuestionIndexToSection(index, sectionPlan, sectionTimer.sectionIndex),
+      )
+    },
+    [sectionPlan, sectionTimer.sectionIndex, sectionTimersEnabled],
+  )
 
   const setAnswer = useCallback((questionId: string, value: string) => {
     setAnswers((prev) => ({
@@ -146,6 +221,35 @@ export function useTestAttempt(attemptId: string | undefined) {
   const currentQuestion = questions[currentIndex]
   const answeredCount = questions.filter((q) => answers[q.id]?.value?.trim()).length
 
+  const sectionBounds = sectionTimersEnabled
+    ? getSectionBounds(sectionPlan, sectionTimer.sectionIndex)
+    : null
+
+  const goNext = useCallback(() => {
+    if (sectionBounds) {
+      setCurrentIndex(Math.min(currentIndex + 1, sectionBounds.end))
+      return
+    }
+    setCurrentIndex(Math.min(currentIndex + 1, questions.length - 1))
+  }, [currentIndex, questions.length, sectionBounds, setCurrentIndex])
+
+  const goPrev = useCallback(() => {
+    if (sectionBounds) {
+      setCurrentIndex(Math.max(currentIndex - 1, sectionBounds.start))
+      return
+    }
+    setCurrentIndex(Math.max(currentIndex - 1, 0))
+  }, [currentIndex, sectionBounds, setCurrentIndex])
+
+  const isLastQuestionInSection = sectionBounds
+    ? currentIndex >= sectionBounds.end
+    : currentIndex >= questions.length - 1
+
+  const canAdvanceSectionEarly =
+    sectionTimersEnabled &&
+    sectionTimer.sectionIndex < sectionTimer.sectionCount - 1 &&
+    isLastQuestionInSection
+
   return {
     attempt,
     questions,
@@ -155,15 +259,31 @@ export function useTestAttempt(attemptId: string | undefined) {
     loading,
     submitting,
     error,
-    formattedTime,
-    remainingSeconds,
-    timerProgress: progressPercent,
-    isExpired,
+    formattedTime: sectionTimersEnabled
+      ? sectionTimer.sectionFormattedTime
+      : overallTimer.formattedTime,
+    remainingSeconds: sectionTimersEnabled
+      ? sectionTimer.sectionRemainingSeconds
+      : overallTimer.remainingSeconds,
+    timerProgress: sectionTimersEnabled
+      ? sectionTimer.sectionTimerProgress
+      : overallTimer.progressPercent,
+    overallFormattedTime: overallTimer.formattedTime,
+    overallRemainingSeconds: overallTimer.remainingSeconds,
+    overallTimerProgress: overallTimer.progressPercent,
+    isExpired: overallTimer.isExpired,
+    sectionTimersEnabled,
+    currentSection: sectionTimer.currentSection,
+    sectionIndex: sectionTimer.sectionIndex,
+    sectionCount: sectionTimer.sectionCount,
+    sectionPlan,
+    canAdvanceSectionEarly,
+    advanceSectionEarly: sectionTimer.advanceSectionEarly,
     answeredCount,
     setAnswer,
     setCurrentIndex,
-    goNext: () => setCurrentIndex((i) => Math.min(i + 1, questions.length - 1)),
-    goPrev: () => setCurrentIndex((i) => Math.max(i - 1, 0)),
+    goNext,
+    goPrev,
     submit: () => doSubmit(false),
   }
 }

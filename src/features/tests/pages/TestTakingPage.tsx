@@ -21,6 +21,16 @@ export function TestTakingPage() {
     formattedTime,
     remainingSeconds,
     timerProgress,
+    overallFormattedTime,
+    overallRemainingSeconds,
+    overallTimerProgress,
+    sectionTimersEnabled,
+    currentSection,
+    sectionIndex,
+    sectionCount,
+    sectionPlan,
+    canAdvanceSectionEarly,
+    advanceSectionEarly,
     answeredCount,
     setAnswer,
     setCurrentIndex,
@@ -70,10 +80,20 @@ export function TestTakingPage() {
         remainingSeconds={remainingSeconds}
         answeredCount={answeredCount}
         submitting={submitting}
+        sectionTimersEnabled={sectionTimersEnabled}
+        currentSectionLabel={currentSection?.section.label}
+        sectionIndex={sectionIndex}
+        sectionCount={sectionCount}
+        overallFormattedTime={sectionTimersEnabled ? overallFormattedTime : undefined}
+        overallTimerProgress={overallTimerProgress}
+        overallRemainingSeconds={overallRemainingSeconds}
+        sectionPlan={sectionPlan}
+        canAdvanceSectionEarly={canAdvanceSectionEarly}
         onAnswer={setAnswer}
         onSelectQuestion={setCurrentIndex}
         onPrev={goPrev}
         onNext={goNext}
+        onAdvanceSection={advanceSectionEarly}
         onSubmit={() => void submit()}
       />
     </div>

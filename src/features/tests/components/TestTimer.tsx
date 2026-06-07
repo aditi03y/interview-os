@@ -6,6 +6,7 @@ interface TestTimerProps {
   progressPercent: number
   isExpired?: boolean
   isLowTime?: boolean
+  label?: string
 }
 
 export function TestTimer({
@@ -13,11 +14,14 @@ export function TestTimer({
   progressPercent,
   isExpired,
   isLowTime,
+  label,
 }: TestTimerProps) {
   const urgent = isLowTime || isExpired
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-col items-end gap-1">
+      {label ? <span className="text-xs text-muted-foreground">{label}</span> : null}
+      <div className="flex items-center gap-3">
       <div className="hidden h-1.5 w-32 overflow-hidden rounded-full bg-muted sm:block">
         <div
           className={`h-full transition-all ${urgent ? 'bg-destructive' : 'bg-primary'}`}
@@ -28,6 +32,7 @@ export function TestTimer({
         {urgent ? <AlertTriangle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
         {formattedTime}
       </Badge>
+      </div>
     </div>
   )
 }
