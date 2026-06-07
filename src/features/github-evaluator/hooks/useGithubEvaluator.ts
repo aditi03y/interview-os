@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/auth'
+import { toast } from '@/lib/toast'
 import {
   evaluateGithubRepo,
   fetchReviewById,
@@ -55,10 +56,15 @@ export function useGithubEvaluator() {
 
     if (result.error) {
       setError(result.error.message)
+      toast.error(result.error.message, 'Evaluation failed')
       return
     }
 
     setReport(result.data)
+    toast.success(
+      `Repository scored ${result.data.qualityScore}/100.`,
+      'Evaluation complete',
+    )
     void loadHistory()
   }, [loadHistory, repoUrl, user])
 

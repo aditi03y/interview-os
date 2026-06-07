@@ -22,7 +22,7 @@ export const SDE_ROADMAP_15_DAYS: RoadmapDay[] = [
         description: 'Big-O, Big-Θ, Big-Ω — analyze algorithm efficiency',
         resources: [
           { id: 'd1-t2-r1', title: 'Big-O Cheat Sheet', url: 'https://www.bigocheatsheet.com/', type: 'docs' },
-          { id: 'd1-t2-r2', title: 'Complexity Video', url: 'https://www.youtube.com/watch?v=Mo4vesautXg', type: 'video' },
+          { id: 'd1-t2-r2', title: 'Big-O Complexity (NeetCode)', url: 'https://neetcode.io/courses/dsa-for-beginners/0', type: 'video' },
         ],
       },
     ],

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/auth'
+import { toast } from '@/lib/toast'
 import {
   completeChat,
   generateConversationTitle,
@@ -85,6 +86,7 @@ export function useAiMentor() {
     const result = await fetchConversation(id)
     if (result.error) {
       setError(result.error.message)
+      toast.error(result.error.message, 'Could not load conversation')
       return
     }
 
@@ -102,9 +104,11 @@ export function useAiMentor() {
 
     if (result.error) {
       setError(result.error.message)
+      toast.error(result.error.message, 'Could not create conversation')
       return
     }
 
+    toast.success('New conversation started.')
     setConversations((prev) => [result.data, ...prev])
     setActiveConversationId(result.data.id)
     setMessages([])
@@ -116,9 +120,11 @@ export function useAiMentor() {
       const result = await deleteConversation(id)
       if (result.error) {
         setError(result.error.message)
+        toast.error(result.error.message, 'Could not delete conversation')
         return
       }
 
+      toast.success('Conversation deleted.')
       setConversations((prev) => prev.filter((c) => c.id !== id))
       if (activeConversationId === id) {
         setActiveConversationId(null)
@@ -141,6 +147,7 @@ export function useAiMentor() {
         const createResult = await createConversation(user.id, { topic: selectedTopic })
         if (createResult.error) {
           setError(createResult.error.message)
+          toast.error(createResult.error.message, 'Could not send message')
           setIsSending(false)
           return
         }
@@ -161,6 +168,7 @@ export function useAiMentor() {
       const saveUserResult = await saveMessage(conversationId, userMessage)
       if (saveUserResult.error) {
         setError(saveUserResult.error.message)
+        toast.error(saveUserResult.error.message, 'Could not save message')
         setIsSending(false)
         return
       }
@@ -202,6 +210,7 @@ export function useAiMentor() {
         const saveAssistantResult = await saveMessage(conversationId, assistantMessage)
         if (saveAssistantResult.error) {
           setError(saveAssistantResult.error.message)
+          toast.error(saveAssistantResult.error.message, 'Could not save response')
         }
 
         setConversations((prev) => {
@@ -215,7 +224,9 @@ export function useAiMentor() {
           return active ? [active, ...rest] : updated
         })
       } catch (err) {
-        setError(mapAIError(err).message)
+        const message = mapAIError(err).message
+        setError(message)
+        toast.error(message, 'AI response failed')
       } finally {
         setIsSending(false)
       }

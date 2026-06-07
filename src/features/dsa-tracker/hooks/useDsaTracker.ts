@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/auth'
+import { toast } from '@/lib/toast'
 import type { Difficulty } from '@/types'
 import {
   buildDailySolves,
@@ -121,6 +122,7 @@ export function useDsaTracker() {
 
       if (result.error) {
         setError(result.error.message)
+        toast.error(result.error.message, editingProblem ? 'Update failed' : 'Create failed')
         return false
       }
 
@@ -128,6 +130,11 @@ export function useDsaTracker() {
         editingProblem
           ? prev.map((p) => (p.id === result.data.id ? result.data : p))
           : [result.data, ...prev],
+      )
+
+      toast.success(
+        editingProblem ? 'Problem updated.' : 'Problem added to your tracker.',
+        editingProblem ? 'Updated' : 'Added',
       )
 
       closeForm()
@@ -143,19 +150,23 @@ export function useDsaTracker() {
 
     if (result.error) {
       setError(result.error.message)
+      toast.error(result.error.message, 'Status update failed')
       return
     }
 
     setProblems((prev) => prev.map((p) => (p.id === id ? result.data : p)))
+    toast.success('Problem status updated.')
   }, [])
 
   const removeProblem = useCallback(async (id: string) => {
     const result = await deleteProblem(id)
     if (result.error) {
       setError(result.error.message)
+      toast.error(result.error.message, 'Delete failed')
       return
     }
     setProblems((prev) => prev.filter((p) => p.id !== id))
+    toast.success('Problem removed from tracker.')
   }, [])
 
   return {

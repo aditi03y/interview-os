@@ -123,6 +123,8 @@ export interface Database {
           attempts: number
           time_taken_minutes: number | null
           status: string
+          roadmap_item_id: string | null
+          study_day: number | null
           created_at: string
           updated_at: string
         }
@@ -140,6 +142,8 @@ export interface Database {
           attempts?: number
           time_taken_minutes?: number | null
           status?: string
+          roadmap_item_id?: string | null
+          study_day?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -157,6 +161,8 @@ export interface Database {
           attempts?: number
           time_taken_minutes?: number | null
           status?: string
+          roadmap_item_id?: string | null
+          study_day?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -300,6 +306,9 @@ export interface Database {
           improvements: Json
           reviewed_at: string
           created_at: string
+          study_day: number | null
+          assignment_id: string | null
+          assignment_title: string | null
         }
         Insert: {
           id?: string
@@ -320,6 +329,9 @@ export interface Database {
           improvements?: Json
           reviewed_at?: string
           created_at?: string
+          study_day?: number | null
+          assignment_id?: string | null
+          assignment_title?: string | null
         }
         Update: {
           id?: string
@@ -340,6 +352,9 @@ export interface Database {
           improvements?: Json
           reviewed_at?: string
           created_at?: string
+          study_day?: number | null
+          assignment_id?: string | null
+          assignment_title?: string | null
         }
         Relationships: [
           {

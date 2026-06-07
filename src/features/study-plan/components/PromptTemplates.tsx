@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { Button } from '@/components/ui'
+import { toast } from '@/lib/toast'
 import type { PromptTemplate } from '../types'
 
 interface PromptTemplatesProps {
@@ -15,8 +16,9 @@ export function PromptTemplates({ templates }: PromptTemplatesProps) {
       await navigator.clipboard.writeText(template.prompt)
       setCopiedId(template.id)
       setTimeout(() => setCopiedId(null), 2000)
+      toast.success('Prompt copied to clipboard.')
     } catch {
-      // Clipboard API may be unavailable
+      toast.error('Could not copy to clipboard.', 'Copy failed')
     }
   }
 

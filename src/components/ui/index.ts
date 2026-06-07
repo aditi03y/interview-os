@@ -22,6 +22,7 @@ export { ErrorAlert } from './ErrorAlert'
 export type { ErrorAlertProps } from './ErrorAlert'
 export { QueryErrorState } from './QueryErrorState'
 export type { QueryErrorStateProps } from './QueryErrorState'
+export { Toaster } from './Toaster'
 export {
   PageHeaderSkeleton,
   StatsGridSkeleton,

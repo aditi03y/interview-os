@@ -11,6 +11,7 @@ import {
   Input,
 } from '@/components/ui'
 import { useSignUp } from '@/hooks/auth'
+import { toast } from '@/lib/toast'
 
 export function SignUpPage() {
   const navigate = useNavigate()
@@ -20,28 +21,30 @@ export function SignUpPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError(null)
-    setSuccessMessage(null)
     clearFieldError()
 
     const result = await signUp({ fullName, email, password, confirmPassword })
 
     if (result.error) {
       setFormError(result.error.message)
+      toast.error(result.error.message, 'Sign up failed')
       return
     }
 
     if (result.data.needsEmailConfirmation) {
-      setSuccessMessage(
-        'Account created! Check your email to confirm your account, then sign in.',
+      toast.info(
+        'Check your email to confirm your account, then sign in.',
+        'Account created',
+        8000,
       )
       return
     }
 
+    toast.success('Account created! Welcome to InterviewOS.')
     void navigate(ROUTES.dashboard, { replace: true })
   }
 
@@ -61,15 +64,6 @@ export function SignUpPage() {
               className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
             >
               {displayError}
-            </div>
-          ) : null}
-
-          {successMessage ? (
-            <div
-              role="status"
-              className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm text-success"
-            >
-              {successMessage}
             </div>
           ) : null}
 

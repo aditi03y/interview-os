@@ -1,61 +1,83 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  formatSeconds,
+  getCountdownProgress,
+  getRemainingSeconds,
+} from '@/lib/timer/timestampTimer'
 
 interface UseTestTimerOptions {
   expiresAt: string
   onExpire: () => void
   enabled?: boolean
+  totalSeconds?: number
 }
 
-export function useTestTimer({ expiresAt, onExpire, enabled = true }: UseTestTimerOptions) {
-  const [, tick] = useState(0)
+export function useTestTimer({
+  expiresAt,
+  onExpire,
+  enabled = true,
+  totalSeconds = 3600,
+}: UseTestTimerOptions) {
+  const [now, setNow] = useState(() => Date.now())
   const expiredRef = useRef(false)
   const onExpireRef = useRef(onExpire)
+  const expiresAtRef = useRef(expiresAt)
+
+  useEffect(() => {
+    expiresAtRef.current = expiresAt
+  }, [expiresAt])
 
   useEffect(() => {
     onExpireRef.current = onExpire
   }, [onExpire])
 
   useEffect(() => {
-    if (!enabled) return undefined
+    if (!enabled || !expiresAt || expiresAt === new Date(0).toISOString()) return undefined
 
-    expiredRef.current = false
+    expiredRef.current = getRemainingSeconds(expiresAt, Date.now()) <= 0
 
-    const interval = window.setInterval(() => {
-      tick((n) => n + 1)
-      const next = getRemaining(expiresAt)
-      if (next <= 0 && !expiredRef.current) {
+    const syncClock = () => {
+      const currentNow = Date.now()
+      setNow(currentNow)
+
+      const remaining = getRemainingSeconds(expiresAtRef.current, currentNow)
+      if (remaining <= 0 && !expiredRef.current) {
         expiredRef.current = true
         onExpireRef.current()
       }
-    }, 1000)
+    }
 
-    return () => window.clearInterval(interval)
-  }, [expiresAt, enabled])
+    syncClock()
+    const interval = window.setInterval(syncClock, 1000)
 
-  const remainingSeconds = getRemaining(expiresAt)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        syncClock()
+      }
+    }
 
-  const formatTime = useCallback((seconds: number) => {
-    const mins = Math.floor(Math.max(0, seconds) / 60)
-    const secs = Math.max(0, seconds) % 60
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
-  }, [])
+    document.addEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('focus', syncClock)
+    window.addEventListener('pageshow', syncClock)
 
-  const progressPercent = useCallback(
-    (totalSeconds: number) => {
-      if (totalSeconds <= 0) return 0
-      return Math.max(0, Math.min(100, (remainingSeconds / totalSeconds) * 100))
-    },
-    [remainingSeconds],
-  )
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('focus', syncClock)
+      window.removeEventListener('pageshow', syncClock)
+    }
+  }, [enabled, expiresAt])
+
+  const remainingSeconds = enabled ? getRemainingSeconds(expiresAt, now) : 0
+
+  const progressPercent = enabled
+    ? getCountdownProgress(expiresAt, totalSeconds, now)
+    : 0
 
   return {
     remainingSeconds,
-    formattedTime: formatTime(remainingSeconds),
+    formattedTime: formatSeconds(remainingSeconds),
     isExpired: remainingSeconds <= 0,
     progressPercent,
   }
-}
-
-function getRemaining(expiresAt: string): number {
-  return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))
 }

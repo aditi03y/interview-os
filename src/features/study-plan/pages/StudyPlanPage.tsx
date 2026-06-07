@@ -1,11 +1,12 @@
 import { Badge, EmptyState, ErrorAlert, PageHeader } from '@/components/ui'
 import { StatsGridSkeleton } from '@/components/ui/PageSkeletons'
+import { useAuth } from '@/hooks/auth'
 import { DayCard } from '../components/DayCard'
 import { StudyPlanOverview } from '../components/StudyPlanOverview'
 import { useStudyPlan } from '../hooks/useStudyPlan'
 import { Map } from 'lucide-react'
 
-export function StudyPlanPage() {
+function StudyPlanContent({ userId }: { userId: string }) {
   const {
     days,
     stats,
@@ -17,8 +18,9 @@ export function StudyPlanPage() {
     saveNotes,
     addStudyTime,
     savingDay,
+    notesSavingDay,
     reload,
-  } = useStudyPlan()
+  } = useStudyPlan(userId)
 
   if (isLoading) {
     return (
@@ -66,10 +68,30 @@ export function StudyPlanPage() {
               onSaveNotes={saveNotes}
               onAddTime={addStudyTime}
               isSaving={savingDay === day.day}
+              notesSaving={notesSavingDay === day.day}
             />
           ))}
         </div>
       )}
     </div>
   )
+}
+
+export function StudyPlanPage() {
+  const { user } = useAuth()
+
+  if (!user) {
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title="Study Plan"
+          description="15-Day SDE Intern Roadmap — theory, DSA, assignments, and notes."
+          actions={<Badge variant="primary">15 Days</Badge>}
+        />
+        <StatsGridSkeleton count={4} className="xl:grid-cols-4" />
+      </div>
+    )
+  }
+
+  return <StudyPlanContent key={user.id} userId={user.id} />
 }

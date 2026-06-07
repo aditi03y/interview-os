@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/app/router/paths'
 import { useAuth } from '@/hooks/auth'
+import { toast } from '@/lib/toast'
 import {
   fetchAttemptById,
   fetchAttemptQuestions,
@@ -94,8 +95,14 @@ export function useTestAttempt(attemptId: string | undefined) {
       setSubmitting(false)
       if (result.error) {
         setError(result.error.message)
+        toast.error(result.error.message, 'Submission failed')
         return
       }
+
+      toast.success(
+        autoSubmitted ? 'Test auto-submitted — time expired.' : 'Test submitted successfully.',
+        'Submission complete',
+      )
       navigate(ROUTES.testResults(attempt.id))
     },
     [attempt, navigate, questions, submitting],
@@ -105,15 +112,16 @@ export function useTestAttempt(attemptId: string | undefined) {
     void doSubmit(true)
   }, [doSubmit])
 
+  const totalDurationSeconds = attempt?.definition?.durationMinutes
+    ? attempt.definition.durationMinutes * 60
+    : 3600
+
   const { formattedTime, remainingSeconds, progressPercent, isExpired } = useTestTimer({
     expiresAt: attempt?.expiresAt ?? new Date(0).toISOString(),
     enabled: Boolean(attempt?.status === 'in_progress'),
     onExpire: handleExpire,
+    totalSeconds: totalDurationSeconds,
   })
-
-  const totalDurationSeconds = attempt?.definition?.durationMinutes
-    ? attempt.definition.durationMinutes * 60
-    : 0
 
   const setAnswer = useCallback((questionId: string, value: string) => {
     setAnswers((prev) => ({
@@ -149,7 +157,7 @@ export function useTestAttempt(attemptId: string | undefined) {
     error,
     formattedTime,
     remainingSeconds,
-    timerProgress: progressPercent(totalDurationSeconds),
+    timerProgress: progressPercent,
     isExpired,
     answeredCount,
     setAnswer,

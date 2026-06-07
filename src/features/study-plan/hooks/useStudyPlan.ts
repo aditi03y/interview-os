@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAuth } from '@/hooks/auth'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { syncDsaItemWithTracker } from '@/features/curriculum/lib/syncDsaProgress'
+import { toast } from '@/lib/toast'
 import { SDE_ROADMAP_15_DAYS } from '../data/roadmap'
 import {
   calculateDayProgressPercent,
@@ -9,74 +10,237 @@ import {
   toggleItemCompletion,
 } from '../lib/progress'
 import {
+  cacheToProgressMap,
+  clearPendingSyncForDay,
+  loadProgressCache,
+  queuePendingSync,
+  saveProgressCache,
+  type PendingSyncEntry,
+} from '../lib/progressPersistence'
+import { createOptimisticProgress, mergeDayProgress, mergeProgressMaps } from '../lib/progressMerge'
+import { studyPlanSyncQueue } from '../lib/syncQueue'
+import {
   fetchStudyDayProgress,
   upsertStudyDayProgress,
 } from '../services/studyPlanService'
 import type { DayProgress, DayWithProgress, StudyPlanStats, StudySection } from '../types'
 
-export function useStudyPlan() {
-  const { user } = useAuth()
-  const [progressMap, setProgressMap] = useState<Map<number, DayProgress>>(new Map())
-  const [isLoading, setIsLoading] = useState(true)
+type UpsertPayload = Parameters<typeof upsertStudyDayProgress>[2]
+
+function readCachedState(userId: string) {
+  const cache = loadProgressCache(userId)
+  return {
+    progressMap: cache ? cacheToProgressMap(cache) : new Map<number, DayProgress>(),
+    isLoading: !cache,
+    isHydrated: Boolean(cache),
+    pendingSync: cache?.pendingSync ?? [],
+  }
+}
+
+function buildFullPayload(
+  dayNumber: number,
+  existing: DayProgress | undefined,
+  patch: UpsertPayload,
+): UpsertPayload {
+  const day = SDE_ROADMAP_15_DAYS.find((d) => d.day === dayNumber)
+  const completed = patch.completedItems ?? existing?.completedItems ?? { ...EMPTY_COMPLETED_ITEMS }
+  const progressPercent =
+    patch.progressPercent ?? existing?.progressPercent ??
+    (day ? calculateDayProgressPercent(day, completed) : 0)
+
+  return {
+    notes: patch.notes ?? existing?.notes ?? '',
+    timeSpentMinutes: patch.timeSpentMinutes ?? existing?.timeSpentMinutes ?? 0,
+    completedItems: completed,
+    progressPercent,
+    status: patch.status ?? existing?.status ?? deriveStatus(progressPercent),
+    completedAt:
+      patch.completedAt !== undefined ? patch.completedAt : existing?.completedAt ?? null,
+  }
+}
+
+export function useStudyPlan(userId: string) {
+  const cachedState = readCachedState(userId)
+
+  const [progressMap, setProgressMap] = useState(cachedState.progressMap)
+  const [isLoading, setIsLoading] = useState(cachedState.isLoading)
+  const [isHydrated, setIsHydrated] = useState(cachedState.isHydrated)
   const [error, setError] = useState<string | null>(null)
   const [expandedDay, setExpandedDay] = useState<number | null>(1)
   const [savingDay, setSavingDay] = useState<number | null>(null)
+  const [notesSavingDay, setNotesSavingDay] = useState<number | null>(null)
 
-  const loadProgress = useCallback(async () => {
-    if (!user) return
-
-    setIsLoading(true)
-    setError(null)
-
-    const result = await fetchStudyDayProgress(user.id)
-
-    if (result.error) {
-      setError(result.error.message)
-      setIsLoading(false)
-      return
-    }
-
-    const map = new Map<number, DayProgress>()
-    for (const row of result.data) {
-      map.set(row.dayNumber, row)
-    }
-    setProgressMap(map)
-    setIsLoading(false)
-  }, [user])
+  const pendingSyncRef = useRef<PendingSyncEntry[]>(cachedState.pendingSync)
+  const progressMapRef = useRef(progressMap)
+  const userIdRef = useRef(userId)
 
   useEffect(() => {
-    if (!user) return
+    progressMapRef.current = progressMap
+  }, [progressMap])
 
+  useEffect(() => {
+    userIdRef.current = userId
+  }, [userId])
+
+  const persistLocal = useCallback((map: Map<number, DayProgress>) => {
+    saveProgressCache(userId, map, pendingSyncRef.current)
+  }, [userId])
+
+  const applyProgressMap = useCallback(
+    (updater: (prev: Map<number, DayProgress>) => Map<number, DayProgress>) => {
+      setProgressMap((prev) => {
+        const next = updater(prev)
+        persistLocal(next)
+        return next
+      })
+    },
+    [persistLocal],
+  )
+
+  const mergeServerRow = useCallback(
+    (dayNumber: number, serverRow: DayProgress) => {
+      applyProgressMap((prev) => {
+        const next = new Map(prev)
+        const day = SDE_ROADMAP_15_DAYS.find((d) => d.day === dayNumber)
+        const local = prev.get(dayNumber)
+
+        if (day && local) {
+          next.set(dayNumber, mergeDayProgress(local, serverRow, day))
+        } else {
+          next.set(dayNumber, serverRow)
+        }
+        return next
+      })
+    },
+    [applyProgressMap],
+  )
+
+  const runUpsert = useCallback(
+    async (
+      dayNumber: number,
+      payload: UpsertPayload,
+      options?: { notesOnly?: boolean; skipQueue?: boolean },
+    ) => {
+      if (userIdRef.current !== userId) return
+
+      const execute = async () => {
+        const existing = progressMapRef.current.get(dayNumber)
+        const fullPayload = buildFullPayload(dayNumber, existing, payload)
+
+        if (options?.notesOnly) {
+          setNotesSavingDay(dayNumber)
+        } else {
+          setSavingDay(dayNumber)
+        }
+
+        pendingSyncRef.current = queuePendingSync(
+          userId,
+          progressMapRef.current,
+          { dayNumber, payload: fullPayload },
+          pendingSyncRef.current,
+        )
+
+        const result = await upsertStudyDayProgress(userId, dayNumber, fullPayload)
+
+        if (options?.notesOnly) {
+          setNotesSavingDay(null)
+        } else {
+          setSavingDay(null)
+        }
+
+        if (result.error) {
+          setError(result.error.message)
+          if (!options?.notesOnly) {
+            toast.error(result.error.message, 'Progress sync failed')
+          }
+          return
+        }
+
+        pendingSyncRef.current = clearPendingSyncForDay(
+          userId,
+          progressMapRef.current,
+          dayNumber,
+          pendingSyncRef.current,
+        )
+
+        mergeServerRow(dayNumber, result.data)
+      }
+
+      if (options?.skipQueue) {
+        await execute()
+      } else {
+        await studyPlanSyncQueue.enqueue(dayNumber, execute)
+      }
+    },
+    [mergeServerRow, userId],
+  )
+
+  const flushPendingSync = useCallback(async () => {
+    if (pendingSyncRef.current.length === 0) return
+
+    const queue = [...pendingSyncRef.current]
+    for (const entry of queue) {
+      await runUpsert(
+        entry.dayNumber,
+        entry.payload as UpsertPayload,
+        { skipQueue: true },
+      )
+    }
+  }, [runUpsert])
+
+  useEffect(() => {
     let cancelled = false
 
-    const run = async () => {
-      setIsLoading(true)
-      setError(null)
-
-      const result = await fetchStudyDayProgress(user.id)
-      if (cancelled) return
+    const hydrateFromServer = async () => {
+      const result = await fetchStudyDayProgress(userId)
+      if (cancelled || userIdRef.current !== userId) return
 
       if (result.error) {
         setError(result.error.message)
         setIsLoading(false)
+        setIsHydrated(true)
         return
       }
 
-      const map = new Map<number, DayProgress>()
+      const remoteMap = new Map<number, DayProgress>()
       for (const row of result.data) {
-        map.set(row.dayNumber, row)
+        remoteMap.set(row.dayNumber, row)
       }
-      setProgressMap(map)
+
+      applyProgressMap((prev) => mergeProgressMaps(prev, remoteMap, SDE_ROADMAP_15_DAYS))
       setIsLoading(false)
+      setIsHydrated(true)
+
+      await flushPendingSync()
     }
 
-    void run()
+    void hydrateFromServer()
 
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when user id changes
-  }, [user?.id])
+  }, [applyProgressMap, flushPendingSync, userId])
+
+  useEffect(() => {
+    const handlePageHide = () => persistLocal(progressMapRef.current)
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        persistLocal(progressMapRef.current)
+        void flushPendingSync()
+      }
+    }
+
+    window.addEventListener('pagehide', handlePageHide)
+    window.addEventListener('beforeunload', handlePageHide)
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide)
+      window.removeEventListener('beforeunload', handlePageHide)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [flushPendingSync, persistLocal])
 
   const days: DayWithProgress[] = useMemo(
     () =>
@@ -94,119 +258,141 @@ export function useStudyPlan() {
 
   const toggleItem = useCallback(
     async (dayNumber: number, section: StudySection, itemId: string) => {
-      if (!user) return
-
       const day = SDE_ROADMAP_15_DAYS.find((d) => d.day === dayNumber)
       if (!day) return
 
-      setSavingDay(dayNumber)
+      let nextCompleted = EMPTY_COMPLETED_ITEMS
+      let nextPercent = 0
+      let nextStatus = deriveStatus(0)
+      let wasChecked = false
+      let snapshot: DayProgress | undefined
 
-      const existing = progressMap.get(dayNumber)
-      const currentCompleted = existing?.completedItems ?? { ...EMPTY_COMPLETED_ITEMS }
-      const nextCompleted = toggleItemCompletion(currentCompleted, section, itemId)
-      const progressPercent = calculateDayProgressPercent(day, nextCompleted)
-      const status = deriveStatus(progressPercent)
+      applyProgressMap((prev) => {
+        snapshot = prev.get(dayNumber)
+        const currentCompleted = snapshot?.completedItems ?? { ...EMPTY_COMPLETED_ITEMS }
+        nextCompleted = toggleItemCompletion(currentCompleted, section, itemId)
+        wasChecked = nextCompleted[section].includes(itemId)
+        nextPercent = calculateDayProgressPercent(day, nextCompleted)
+        nextStatus = deriveStatus(nextPercent)
 
-      const result = await upsertStudyDayProgress(user.id, dayNumber, {
-        completedItems: nextCompleted,
-        progressPercent,
-        status,
-        completedAt: status === 'completed' ? new Date().toISOString() : null,
-        notes: existing?.notes ?? '',
-        timeSpentMinutes: existing?.timeSpentMinutes ?? 0,
-      })
-
-      setSavingDay(null)
-
-      if (result.error) {
-        setError(result.error.message)
-        return
-      }
-
-      setProgressMap((prev) => {
         const next = new Map(prev)
-        next.set(dayNumber, result.data)
+        next.set(
+          dayNumber,
+          createOptimisticProgress(userId, dayNumber, snapshot, {
+            completedItems: nextCompleted,
+            progressPercent: nextPercent,
+            status: nextStatus,
+            completedAt: nextStatus === 'completed' ? new Date().toISOString() : null,
+          }),
+        )
         return next
       })
+
+      if (section === 'dsa') {
+        void syncDsaItemWithTracker(userId, itemId, wasChecked)
+      }
+
+      await runUpsert(dayNumber, {
+        completedItems: nextCompleted,
+        progressPercent: nextPercent,
+        status: nextStatus,
+        completedAt: nextStatus === 'completed' ? new Date().toISOString() : null,
+        notes: snapshot?.notes,
+        timeSpentMinutes: snapshot?.timeSpentMinutes,
+      })
     },
-    [user, progressMap],
+    [applyProgressMap, runUpsert, userId],
   )
 
   const saveNotes = useCallback(
     async (dayNumber: number, notes: string) => {
-      if (!user) return
+      applyProgressMap((prev) => {
+        const existing = prev.get(dayNumber)
+        const day = SDE_ROADMAP_15_DAYS.find((d) => d.day === dayNumber)
+        if (!day) return prev
 
-      setSavingDay(dayNumber)
+        const completed = existing?.completedItems ?? { ...EMPTY_COMPLETED_ITEMS }
+        const progressPercent =
+          existing?.progressPercent ?? calculateDayProgressPercent(day, completed)
 
-      const existing = progressMap.get(dayNumber)
-      const day = SDE_ROADMAP_15_DAYS.find((d) => d.day === dayNumber)!
-      const completed = existing?.completedItems ?? { ...EMPTY_COMPLETED_ITEMS }
-
-      const result = await upsertStudyDayProgress(user.id, dayNumber, {
-        notes,
-        completedItems: completed,
-        progressPercent: existing?.progressPercent ?? calculateDayProgressPercent(day, completed),
-        status: existing?.status ?? deriveStatus(calculateDayProgressPercent(day, completed)),
-        timeSpentMinutes: existing?.timeSpentMinutes ?? 0,
-        completedAt: existing?.completedAt ?? null,
-      })
-
-      setSavingDay(null)
-
-      if (result.error) {
-        setError(result.error.message)
-        return
-      }
-
-      setProgressMap((prev) => {
         const next = new Map(prev)
-        next.set(dayNumber, result.data)
+        next.set(
+          dayNumber,
+          createOptimisticProgress(userId, dayNumber, existing, {
+            notes,
+            completedItems: completed,
+            progressPercent,
+            status: existing?.status ?? deriveStatus(progressPercent),
+          }),
+        )
         return next
       })
+
+      await runUpsert(dayNumber, { notes }, { notesOnly: true })
     },
-    [user, progressMap],
+    [applyProgressMap, runUpsert, userId],
   )
 
   const addStudyTime = useCallback(
     async (dayNumber: number, minutesToAdd: number) => {
-      if (!user || minutesToAdd <= 0) return
+      if (minutesToAdd <= 0) return
 
-      setSavingDay(dayNumber)
+      let nextMinutes = 0
+      let snapshot: DayProgress | undefined
 
-      const existing = progressMap.get(dayNumber)
-      const day = SDE_ROADMAP_15_DAYS.find((d) => d.day === dayNumber)!
-      const completed = existing?.completedItems ?? { ...EMPTY_COMPLETED_ITEMS }
-      const nextMinutes = (existing?.timeSpentMinutes ?? 0) + minutesToAdd
+      applyProgressMap((prev) => {
+        snapshot = prev.get(dayNumber)
+        const day = SDE_ROADMAP_15_DAYS.find((d) => d.day === dayNumber)
+        if (!day) return prev
 
-      const result = await upsertStudyDayProgress(user.id, dayNumber, {
-        timeSpentMinutes: nextMinutes,
-        notes: existing?.notes ?? '',
-        completedItems: completed,
-        progressPercent: existing?.progressPercent ?? calculateDayProgressPercent(day, completed),
-        status: existing?.status ?? deriveStatus(calculateDayProgressPercent(day, completed)),
-        completedAt: existing?.completedAt ?? null,
-      })
+        const completed = snapshot?.completedItems ?? { ...EMPTY_COMPLETED_ITEMS }
+        nextMinutes = (snapshot?.timeSpentMinutes ?? 0) + minutesToAdd
+        const progressPercent =
+          snapshot?.progressPercent ?? calculateDayProgressPercent(day, completed)
 
-      setSavingDay(null)
-
-      if (result.error) {
-        setError(result.error.message)
-        return
-      }
-
-      setProgressMap((prev) => {
         const next = new Map(prev)
-        next.set(dayNumber, result.data)
+        next.set(
+          dayNumber,
+          createOptimisticProgress(userId, dayNumber, snapshot, {
+            timeSpentMinutes: nextMinutes,
+            completedItems: completed,
+            progressPercent,
+            status: snapshot?.status ?? deriveStatus(progressPercent),
+          }),
+        )
         return next
       })
+
+      await runUpsert(dayNumber, {
+        timeSpentMinutes: nextMinutes,
+        notes: snapshot?.notes,
+        completedItems: snapshot?.completedItems,
+      })
     },
-    [user, progressMap],
+    [applyProgressMap, runUpsert, userId],
   )
+
+  const reload = useCallback(async () => {
+    setError(null)
+
+    const result = await fetchStudyDayProgress(userId)
+    if (result.error) {
+      setError(result.error.message)
+      return
+    }
+
+    const remoteMap = new Map<number, DayProgress>()
+    for (const row of result.data) {
+      remoteMap.set(row.dayNumber, row)
+    }
+
+    applyProgressMap((prev) => mergeProgressMaps(prev, remoteMap, SDE_ROADMAP_15_DAYS))
+  }, [applyProgressMap, userId])
 
   return {
     days,
     stats,
-    isLoading,
+    isLoading: isLoading && !isHydrated,
     error,
     expandedDay,
     setExpandedDay,
@@ -214,6 +400,7 @@ export function useStudyPlan() {
     saveNotes,
     addStudyTime,
     savingDay,
-    reload: loadProgress,
+    notesSavingDay,
+    reload,
   }
 }

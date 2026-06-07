@@ -11,6 +11,7 @@ import {
   Input,
 } from '@/components/ui'
 import { useSignIn } from '@/hooks/auth'
+import { toast } from '@/lib/toast'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -31,9 +32,11 @@ export function LoginPage() {
     const result = await signIn(email, password)
     if (result.error) {
       setFormError(result.error.message)
+      toast.error(result.error.message, 'Sign in failed')
       return
     }
 
+    toast.success('Welcome back! Redirecting to your dashboard.')
     void navigate(from, { replace: true })
   }
 

@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Monitor, Moon, Sun } from 'lucide-react'
+import { ROUTES } from '@/app/router/paths'
 import {
   Button,
   Card,
@@ -11,6 +13,7 @@ import {
   PageHeader,
 } from '@/components/ui'
 import { useAuth, useSignOut } from '@/hooks/auth'
+import { toast } from '@/lib/toast'
 import { useAuthStore } from '@/stores'
 import { useThemeStore } from '@/stores'
 import type { ThemeMode, UserProfile } from '@/types'
@@ -30,12 +33,10 @@ function ProfileForm({ user }: { user: UserProfile }) {
   const [college, setCollege] = useState(user.college ?? '')
   const [targetRole, setTargetRole] = useState(user.targetRole ?? '')
   const [githubUsername, setGithubUsername] = useState(user.githubUsername ?? '')
-  const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaveMessage(null)
     setSaveError(null)
 
     const result = await updateProfile({
@@ -47,10 +48,11 @@ function ProfileForm({ user }: { user: UserProfile }) {
 
     if (result.error) {
       setSaveError(result.error.message)
+      toast.error(result.error.message, 'Profile update failed')
       return
     }
 
-    setSaveMessage('Profile updated successfully.')
+    toast.success('Your profile has been updated.')
   }
 
   return (
@@ -58,11 +60,6 @@ function ProfileForm({ user }: { user: UserProfile }) {
       {saveError ? (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {saveError}
-        </div>
-      ) : null}
-      {saveMessage ? (
-        <div className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
-          {saveMessage}
         </div>
       ) : null}
 
@@ -98,13 +95,26 @@ function ProfileForm({ user }: { user: UserProfile }) {
 }
 
 export function SettingsPage() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { signOut, isLoading: isSigningOut } = useSignOut()
   const mode = useThemeStore((s) => s.mode)
   const setMode = useThemeStore((s) => s.setMode)
 
   const handleSignOut = async () => {
-    await signOut()
+    const result = await signOut()
+    if (result.error) {
+      toast.error(result.error.message, 'Sign out failed')
+      return
+    }
+
+    toast.success('You have been signed out.')
+    void navigate(ROUTES.auth.login, { replace: true })
+  }
+
+  const handleThemeChange = (themeMode: ThemeMode) => {
+    setMode(themeMode)
+    toast.info(`Theme set to ${themeMode}.`, 'Appearance updated')
   }
 
   return (
@@ -135,7 +145,7 @@ export function SettingsPage() {
               <button
                 key={themeMode}
                 type="button"
-                onClick={() => setMode(themeMode)}
+                onClick={() => handleThemeChange(themeMode)}
                 className={cn(
                   'flex flex-col items-center gap-2 rounded-lg border p-4 transition-colors',
                   mode === themeMode

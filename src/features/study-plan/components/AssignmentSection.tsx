@@ -3,25 +3,25 @@ import { Badge } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { isItemCompleted } from '../lib/progress'
 import { ResourceLinks } from './ResourceLinks'
+import { AssignmentEvaluator } from './AssignmentEvaluator'
 import type { CompletedItems, RoadmapItem, StudySection } from '../types'
 
-interface DaySectionProps {
-  title: string
-  section: StudySection
+interface AssignmentSectionProps {
+  dayNumber: number
   items: RoadmapItem[]
   completedItems: CompletedItems
   onToggle: (section: StudySection, itemId: string) => void
   disabled?: boolean
 }
 
-export function DaySection({
-  title,
-  section,
+export function AssignmentSection({
+  dayNumber,
   items,
   completedItems,
   onToggle,
   disabled,
-}: DaySectionProps) {
+}: AssignmentSectionProps) {
+  const section: StudySection = 'assignment'
   const doneCount = items.filter((item) =>
     isItemCompleted(completedItems, section, item.id),
   ).length
@@ -29,7 +29,7 @@ export function DaySection({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-foreground">{title}</h4>
+        <h4 className="text-sm font-semibold text-foreground">Assignment</h4>
         <Badge variant="outline">
           {doneCount}/{items.length}
         </Badge>
@@ -74,6 +74,14 @@ export function DaySection({
               </button>
 
               <ResourceLinks resources={item.resources} />
+
+              <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                <AssignmentEvaluator
+                  dayNumber={dayNumber}
+                  assignmentId={item.id}
+                  assignmentTitle={item.title}
+                />
+              </div>
             </li>
           )
         })}

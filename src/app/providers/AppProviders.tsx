@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { useRoutes } from 'react-router-dom'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { Toaster } from '@/components/ui'
 import { appRoutes } from '@/app/router'
 import { useThemeSync } from '@/stores'
 import { useAuthStore } from '@/stores'
@@ -28,6 +29,7 @@ export function AppProviders() {
       <BrowserRouter>
         <AppInitializer>
           <AppRoutes />
+          <Toaster />
         </AppInitializer>
       </BrowserRouter>
     </ErrorBoundary>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/auth'
+import { toast } from '@/lib/toast'
 import {
   buildScheduledSlots,
   getPlanDay,
@@ -129,9 +130,11 @@ export function useTests() {
       setStartingId(null)
       if (result.error) {
         setError(result.error.message)
+        toast.error(result.error.message, 'Could not start test')
         return null
       }
       if (result.data) {
+        toast.success(`Started ${definition.title}. Good luck!`, 'Test started')
         setAttempts((prev) => [result.data!, ...prev])
       }
       return result.data

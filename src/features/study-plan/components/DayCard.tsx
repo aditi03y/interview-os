@@ -6,6 +6,7 @@ import {
   EMPTY_COMPLETED_ITEMS,
   formatStudyTime,
 } from '../lib/progress'
+import { AssignmentSection } from './AssignmentSection'
 import { DaySection } from './DaySection'
 import { NotesEditor } from './NotesEditor'
 import { PromptTemplates } from './PromptTemplates'
@@ -20,6 +21,7 @@ interface DayCardProps {
   onSaveNotes: (dayNumber: number, notes: string) => Promise<void>
   onAddTime: (dayNumber: number, minutes: number) => Promise<void>
   isSaving: boolean
+  notesSaving: boolean
 }
 
 export function DayCard({
@@ -30,6 +32,7 @@ export function DayCard({
   onSaveNotes,
   onAddTime,
   isSaving,
+  notesSaving,
 }: DayCardProps) {
   const completed = day.progress?.completedItems ?? { ...EMPTY_COMPLETED_ITEMS }
   const progressPercent =
@@ -82,7 +85,7 @@ export function DayCard({
               </span>
             </div>
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
+              <Clock className="h-3.5 w-3.5" aria-hidden />
               {formatStudyTime(timeSpent)} / ~{formatStudyTime(day.estimatedMinutes)}
             </span>
           </div>
@@ -93,12 +96,14 @@ export function DayCard({
             'h-5 w-5 shrink-0 text-muted-foreground transition-transform',
             isExpanded && 'rotate-180',
           )}
+          aria-hidden
         />
       </button>
 
       {isExpanded ? (
         <div className="space-y-6 border-t border-border p-4 sm:p-5">
           <TimeTracker
+            dayNumber={day.day}
             totalMinutes={timeSpent}
             onAddTime={(minutes) => onAddTime(day.day, minutes)}
             isSaving={isSaving}
@@ -123,9 +128,8 @@ export function DayCard({
             />
           </div>
 
-          <DaySection
-            title="Assignment"
-            section="assignment"
+          <AssignmentSection
+            dayNumber={day.day}
             items={day.assignment}
             completedItems={completed}
             onToggle={(section, itemId) => onToggleItem(day.day, section, itemId)}
@@ -135,11 +139,11 @@ export function DayCard({
           <PromptTemplates templates={day.promptTemplates} />
 
           <NotesEditor
-            key={`notes-${day.day}-${notes}`}
+            key={`notes-editor-${day.day}`}
             dayNumber={day.day}
             initialNotes={notes}
             onSave={(n) => onSaveNotes(day.day, n)}
-            isSaving={isSaving}
+            isSaving={notesSaving}
           />
         </div>
       ) : null}
