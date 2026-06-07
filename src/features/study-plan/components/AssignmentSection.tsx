@@ -80,6 +80,7 @@ export function AssignmentSection({
                   dayNumber={dayNumber}
                   assignmentId={item.id}
                   assignmentTitle={item.title}
+                  assignmentDescription={item.description}
                 />
               </div>
             </li>

@@ -3,6 +3,8 @@ import type {
   GithubRepoMetadata,
   GithubRepoSnapshot,
   ParsedRepoUrl,
+  RepoFileEntry,
+  RepoSourceSample,
 } from '../types'
 
 const README_MAX_CHARS = 12_000
@@ -191,4 +193,131 @@ export function summarizeCommits(commits: GithubCommitSummary[]): string {
 function formatDate(iso: string | undefined): string {
   if (!iso) return 'unknown'
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+interface GithubContentItem {
+  name: string
+  path: string
+  type: 'file' | 'dir'
+  size: number
+  download_url: string | null
+}
+
+const SOURCE_EXTENSIONS = new Set([
+  '.py', '.java', '.cpp', '.cc', '.c', '.h', '.hpp',
+  '.js', '.jsx', '.ts', '.tsx', '.go', '.rs', '.kt', '.cs', '.rb',
+])
+const SOURCE_MAX_FILES = 8
+const SOURCE_MAX_CHARS = 3500
+const SKIP_PATHS = new Set(['node_modules', 'dist', 'build', '.git', 'vendor', '__pycache__', '.venv', 'target'])
+
+export async function fetchGithubRepoSnapshotForAssignment(
+  parsed: ParsedRepoUrl,
+): Promise<GithubRepoSnapshot> {
+  const snapshot = await fetchGithubRepoSnapshot(parsed)
+  const base = `/repos/${parsed.owner}/${parsed.repo}`
+
+  try {
+    const rootEntries = await fetchDirectoryContents(base, '')
+    const nestedEntries = await fetchNestedSourceEntries(base, rootEntries)
+    const allEntries = [...rootEntries, ...nestedEntries]
+    const sourcePaths = collectSourcePaths(allEntries)
+    const sourceSamples = await fetchSourceSamples(base, sourcePaths)
+
+    return {
+      ...snapshot,
+      rootEntries: allEntries,
+      sourceSamples,
+    }
+  } catch {
+    return snapshot
+  }
+}
+
+async function fetchDirectoryContents(base: string, path: string): Promise<RepoFileEntry[]> {
+  const suffix = path ? `/contents/${encodeURIComponent(path)}` : '/contents'
+  const items = await githubFetch<GithubContentItem[]>(`${base}${suffix}`)
+
+  return items
+    .filter((item) => !SKIP_PATHS.has(item.name))
+    .map((item) => ({
+      path: item.path,
+      type: item.type === 'dir' ? 'dir' : 'file',
+      size: item.size,
+    }))
+}
+
+async function fetchNestedSourceEntries(
+  base: string,
+  rootEntries: RepoFileEntry[],
+): Promise<RepoFileEntry[]> {
+  const nested: RepoFileEntry[] = []
+  const dirsToScan = rootEntries
+    .filter((e) => e.type === 'dir' && ['src', 'lib', 'include', 'test', 'tests'].includes(e.path))
+    .slice(0, 3)
+
+  for (const dir of dirsToScan) {
+    try {
+      const children = await fetchDirectoryContents(base, dir.path)
+      nested.push(...children.map((c) => ({ ...c, path: c.path })))
+    } catch {
+      // skip unreadable directories
+    }
+  }
+
+  return nested
+}
+
+function isSourceFile(path: string): boolean {
+  const lower = path.toLowerCase()
+  return [...SOURCE_EXTENSIONS].some((ext) => lower.endsWith(ext))
+}
+
+function collectSourcePaths(entries: RepoFileEntry[]): string[] {
+  const paths: string[] = []
+
+  for (const entry of entries) {
+    if (entry.type === 'file' && isSourceFile(entry.path) && entry.size < 100_000) {
+      paths.push(entry.path)
+    }
+  }
+
+  const priority = (path: string) => {
+    if (path.includes('test')) return 2
+    if (path.startsWith('src/')) return 0
+    return 1
+  }
+
+  return [...new Set(paths)]
+    .sort((a, b) => priority(a) - priority(b))
+    .slice(0, SOURCE_MAX_FILES)
+}
+
+async function fetchSourceSamples(base: string, paths: string[]): Promise<RepoSourceSample[]> {
+  const samples: RepoSourceSample[] = []
+
+  for (const path of paths) {
+    try {
+      const response = await fetch(`${GITHUB_API}${base}/contents/${encodeURIComponent(path)}`, {
+        headers: {
+          ...getHeaders(),
+          Accept: 'application/vnd.github.raw',
+        },
+      })
+
+      if (!response.ok) continue
+
+      const text = await response.text()
+      const truncated = text.length > SOURCE_MAX_CHARS
+      samples.push({
+        path,
+        content: truncated ? `${text.slice(0, SOURCE_MAX_CHARS)}\n\n...[truncated]` : text,
+        truncated,
+      })
+    } catch {
+      // skip unreadable files
+    }
+  }
+
+  return samples
 }

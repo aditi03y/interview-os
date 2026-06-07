@@ -12,6 +12,7 @@ import {
 } from '@/components/ui'
 import { useSignIn } from '@/hooks/auth'
 import { toast } from '@/lib/toast'
+import { useAuthStore } from '@/stores'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -37,6 +38,10 @@ export function LoginPage() {
     }
 
     toast.success('Welcome back! Redirecting to your dashboard.')
+    const profile = useAuthStore.getState().user
+    if (profile?.appRole === 'admin') {
+      toast.info('You have admin access. Open Admin Console from the sidebar.', 'Admin')
+    }
     void navigate(from, { replace: true })
   }
 

@@ -2,6 +2,7 @@ import type { Json } from '@/types/database'
 import {
   parseCodingMetadata,
   parseMcqOptions,
+  parseTestSections,
   type AttemptAnswers,
   type TestAttempt,
   type TestDefinition,
@@ -19,6 +20,8 @@ interface DefinitionRow {
   topics: Json
   max_score: number
   is_active: boolean
+  covered_study_days?: number[] | null
+  sections?: Json | null
 }
 
 interface QuestionRow {
@@ -69,6 +72,8 @@ export function mapDefinitionRow(row: DefinitionRow, questionCount?: number): Te
     topics: Array.isArray(row.topics) ? (row.topics as string[]) : [],
     maxScore: Number(row.max_score),
     isActive: row.is_active,
+    coveredStudyDays: row.covered_study_days ?? [],
+    sections: parseTestSections(row.sections),
     questionCount,
   }
 }

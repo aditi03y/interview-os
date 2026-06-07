@@ -21,6 +21,7 @@ export type ViolationEventType =
   | 'paste_attempt'
   | 'idle_time'
   | 'fullscreen_exit'
+export type AppRole = 'user' | 'admin'
 
 export interface Database {
   public: {
@@ -34,6 +35,7 @@ export interface Database {
           college: string | null
           target_role: string | null
           github_username: string | null
+          app_role: AppRole
           created_at: string
           updated_at: string
         }
@@ -45,6 +47,7 @@ export interface Database {
           college?: string | null
           target_role?: string | null
           github_username?: string | null
+          app_role?: AppRole
           created_at?: string
           updated_at?: string
         }
@@ -56,6 +59,7 @@ export interface Database {
           college?: string | null
           target_role?: string | null
           github_username?: string | null
+          app_role?: AppRole
           created_at?: string
           updated_at?: string
         }
@@ -545,6 +549,8 @@ export interface Database {
           topics: Json
           max_score: number
           is_active: boolean
+          covered_study_days: number[]
+          sections: Json
           created_at: string
           updated_at: string
         }
@@ -559,6 +565,8 @@ export interface Database {
           topics?: Json
           max_score?: number
           is_active?: boolean
+          covered_study_days?: number[]
+          sections?: Json
           created_at?: string
           updated_at?: string
         }
@@ -573,6 +581,8 @@ export interface Database {
           topics?: Json
           max_score?: number
           is_active?: boolean
+          covered_study_days?: number[]
+          sections?: Json
           created_at?: string
           updated_at?: string
         }
@@ -759,6 +769,120 @@ export interface Database {
             referencedColumns: ['id']
           },
         ]
+      }
+      resource_catalog: {
+        Row: {
+          id: string
+          title: string
+          url: string
+          provider: string
+          category: string
+          status: string
+          fallback_url: string | null
+          fallback_title: string | null
+          last_checked_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          title: string
+          url: string
+          provider?: string
+          category?: string
+          status?: string
+          fallback_url?: string | null
+          fallback_title?: string | null
+          last_checked_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          url?: string
+          provider?: string
+          category?: string
+          status?: string
+          fallback_url?: string | null
+          fallback_title?: string | null
+          last_checked_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      content_prompts: {
+        Row: {
+          id: string
+          category: string
+          title: string
+          description: string | null
+          prompt_text: string
+          metadata: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id: string
+          category?: string
+          title: string
+          description?: string | null
+          prompt_text: string
+          metadata?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          category?: string
+          title?: string
+          description?: string | null
+          prompt_text?: string
+          metadata?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      prompt_library_items: {
+        Row: {
+          id: string
+          title: string
+          category: string
+          description: string
+          prompt: string
+          tags: string[]
+          is_published: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          title: string
+          category: string
+          description?: string
+          prompt: string
+          tags?: string[]
+          is_published?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          category?: string
+          description?: string
+          prompt?: string
+          tags?: string[]
+          is_published?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: Record<string, never>

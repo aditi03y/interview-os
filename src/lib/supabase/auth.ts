@@ -1,6 +1,6 @@
 import type { Session, User } from '@supabase/supabase-js'
 import type { UserProfile, ApiResult } from '@/types'
-import type { UserRow, UserUpdate } from '@/types/database'
+import type { UserRow, UserUpdate, AppRole } from '@/types/database'
 import { supabase } from './client'
 import { mapPostgrestError, mapSupabaseError } from './errors'
 
@@ -13,6 +13,7 @@ export function mapUserRowToProfile(row: UserRow): UserProfile {
     college: row.college,
     targetRole: row.target_role,
     githubUsername: row.github_username,
+    appRole: row.app_role ?? 'user',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -27,6 +28,7 @@ export function mapAuthUserToProfile(user: User): UserProfile {
     college: null,
     targetRole: null,
     githubUsername: null,
+    appRole: 'user' as AppRole,
     createdAt: user.created_at,
     updatedAt: user.updated_at ?? user.created_at,
   }

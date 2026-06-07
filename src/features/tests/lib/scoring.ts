@@ -2,8 +2,10 @@ import type {
   AttemptAnswers,
   CodingMetadata,
   QuestionAnswer,
+  TestGradingConfig,
   TestQuestion,
 } from '../types'
+import { getQuestionSectionId } from '../types'
 
 export interface GradeResult {
   answers: AttemptAnswers
@@ -11,10 +13,15 @@ export interface GradeResult {
   maxScore: number
 }
 
-export function gradeAttempt(questions: TestQuestion[], answers: AttemptAnswers): GradeResult {
+export function gradeAttempt(
+  questions: TestQuestion[],
+  answers: AttemptAnswers,
+  grading?: TestGradingConfig,
+): GradeResult {
   const graded: AttemptAnswers = { ...answers }
   let score = 0
   let maxScore = 0
+  const sectionById = new Map((grading?.sections ?? []).map((section) => [section.id, section]))
 
   for (const question of questions) {
     maxScore += question.points
@@ -22,9 +29,26 @@ export function gradeAttempt(questions: TestQuestion[], answers: AttemptAnswers)
     const result = gradeQuestion(question, existing)
     graded[question.id] = result
     score += result.pointsEarned ?? 0
+
+    const sectionId = getQuestionSectionId(question)
+    const section = sectionId ? sectionById.get(sectionId) : undefined
+    const negativeMarking = section?.negativeMarking
+
+    if (
+      question.questionType === 'mcq' &&
+      negativeMarking?.enabled &&
+      result.value &&
+      result.isCorrect === false
+    ) {
+      score -= negativeMarking.penaltyPerWrong
+    }
   }
 
-  return { answers: graded, score: roundScore(score), maxScore: roundScore(maxScore) }
+  return {
+    answers: graded,
+    score: roundScore(Math.max(0, score)),
+    maxScore: roundScore(maxScore),
+  }
 }
 
 function gradeQuestion(question: TestQuestion, answer: QuestionAnswer): QuestionAnswer {
@@ -57,12 +81,12 @@ function gradeQuestion(question: TestQuestion, answer: QuestionAnswer): Question
   }
 
   if (question.questionType === 'coding') {
-    const meta = question.metadata as CodingMetadata
+    const meta = question.metadata as { testCases?: unknown[]; functionName?: string }
     if (!meta?.testCases?.length || !value) {
       return { value, isCorrect: false, pointsEarned: 0, graded: true }
     }
 
-    const { passed, total } = runCodingTests(value, meta)
+    const { passed, total } = runCodingTests(value, meta as CodingMetadata)
     const ratio = total > 0 ? passed / total : 0
     return {
       value,

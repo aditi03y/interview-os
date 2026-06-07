@@ -9,6 +9,7 @@ export function useAuth() {
   const clearError = useAuthStore((s) => s.clearError)
 
   const isAuthenticated = Boolean(session && user)
+  const isAdmin = user?.appRole === 'admin'
 
   return {
     session,
@@ -16,6 +17,7 @@ export function useAuth() {
     isLoading,
     isInitialized,
     isAuthenticated,
+    isAdmin,
     error,
     clearError,
   }

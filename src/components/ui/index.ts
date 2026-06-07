@@ -4,6 +4,8 @@ export { Card, CardHeader, CardTitle, CardDescription, CardContent } from './Car
 export type { CardProps } from './Card'
 export { Input } from './Input'
 export type { InputProps } from './Input'
+export { DraftNumberInput, DraftNullableNumberInput } from './DraftNumberInput'
+export type { DraftNumberInputProps, DraftNullableNumberInputProps } from './DraftNumberInput'
 export { Badge } from './Badge'
 export type { BadgeProps } from './Badge'
 export { Skeleton } from './Skeleton'

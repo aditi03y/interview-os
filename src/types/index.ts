@@ -8,6 +8,7 @@ export type {
   Database,
   UserRow,
   UserUpdate,
+  AppRole,
   StudyProgressRow,
   DsaProgressRow,
   TestRow,
@@ -22,6 +23,7 @@ export type {
   TestType,
   TestStatus,
 } from './database'
+import type { AppRole } from './database'
 
 export interface UserProfile {
   id: string
@@ -31,6 +33,7 @@ export interface UserProfile {
   college: string | null
   targetRole: string | null
   githubUsername: string | null
+  appRole: AppRole
   createdAt: string
   updatedAt: string
 }

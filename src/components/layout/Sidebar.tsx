@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
-import { NAVIGATION_GROUPS } from '@/lib/constants/navigation'
+import { getNavigationGroups } from '@/lib/constants/navigation'
 import { APP_NAME, APP_TAGLINE } from '@/lib/constants/app'
 import { cn, getInitials } from '@/lib/utils'
 import { useAuth } from '@/hooks/auth'
@@ -13,7 +13,8 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const { sidebarCollapsed, toggleSidebarCollapsed, closeMobileNav } = useSidebar()
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
+  const navGroups = getNavigationGroups(isAdmin)
 
   return (
     <aside
@@ -62,7 +63,7 @@ export function Sidebar({ className }: SidebarProps) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        {NAVIGATION_GROUPS.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.id} className="mb-6 last:mb-0">
             {!sidebarCollapsed ? (
               <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

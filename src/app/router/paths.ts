@@ -13,6 +13,14 @@ export const ROUTES = {
   githubEvaluator: '/github-evaluator',
   promptLibrary: '/prompt-library',
   settings: '/settings',
+  admin: {
+    root: '/admin',
+    tests: '/admin/tests',
+    testNew: '/admin/tests/new',
+    testDetail: (testId: string) => `/admin/tests/${testId}`,
+    prompts: '/admin/prompts',
+    resources: '/admin/resources',
+  },
   auth: {
     login: '/auth/login',
     signup: '/auth/signup',

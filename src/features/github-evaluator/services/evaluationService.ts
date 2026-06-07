@@ -167,7 +167,12 @@ export async function fetchReviewById(
   if (error) return { data: null, error: mapPostgrestError(error) }
 
   const metadata = data.repo_metadata as RepoEvaluationReport['snapshot'] | null
-  const reportJson = data.report as { sections?: RepoEvaluationReport['sections'] } | null
+  const reportJson = data.report as {
+    sections?: RepoEvaluationReport['sections']
+    assignment?: RepoEvaluationReport['assignment']
+    assignmentEvaluation?: RepoEvaluationReport['assignmentEvaluation']
+    repoQualityScore?: number
+  } | null
 
   return {
     data: {
@@ -175,7 +180,7 @@ export async function fetchReviewById(
       repoUrl: data.repo_url ?? '',
       repoName: data.repo_name,
       owner: data.github_username,
-      qualityScore: data.score ?? 0,
+      qualityScore: reportJson?.repoQualityScore ?? data.score ?? 0,
       documentationScore: data.documentation_score ?? 0,
       structureScore: data.structure_score ?? 0,
       engineeringScore: data.engineering_score ?? 0,
@@ -189,6 +194,8 @@ export async function fetchReviewById(
         commitActivity: '',
         recommendations: [],
       },
+      assignment: reportJson?.assignment,
+      assignmentEvaluation: reportJson?.assignmentEvaluation,
       snapshot: metadata ?? {
         metadata: {
           name: data.repo_name,

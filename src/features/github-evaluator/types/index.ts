@@ -42,6 +42,21 @@ export interface GithubRepoSnapshot {
   commits: GithubCommitSummary[]
   languages: Record<string, number>
   fetchedAt: string
+  /** Present when fetched for assignment evaluation */
+  rootEntries?: RepoFileEntry[]
+  sourceSamples?: RepoSourceSample[]
+}
+
+export interface RepoFileEntry {
+  path: string
+  type: 'file' | 'dir'
+  size: number
+}
+
+export interface RepoSourceSample {
+  path: string
+  content: string
+  truncated: boolean
 }
 
 export interface EvaluationScores {
@@ -57,6 +72,16 @@ export interface EvaluationReportSections {
   engineering: string
   commitActivity: string
   recommendations: string[]
+  assignmentAccomplishment?: string
+  requirementsCoverage?: string
+}
+
+export interface AssignmentEvaluationScores {
+  assignmentAccomplishmentScore: number
+  requirementsMetScore: number
+  functionalityScore: number
+  accomplishedCriteria: string[]
+  missingRequirements: string[]
 }
 
 export interface RepoEvaluationReport extends EvaluationScores {
@@ -70,6 +95,15 @@ export interface RepoEvaluationReport extends EvaluationScores {
   sections: EvaluationReportSections
   snapshot: GithubRepoSnapshot
   reviewedAt: string
+  /** Set when evaluating a study-plan assignment submission */
+  assignment?: {
+    id: string
+    title: string
+    description?: string
+    dayNumber: number
+    dayTitle: string
+  }
+  assignmentEvaluation?: AssignmentEvaluationScores
 }
 
 export interface GithubReviewHistoryItem {

@@ -1,0 +1,5 @@
+export { AdminDashboardPage } from './pages/AdminDashboardPage'
+export { AdminTestsPage } from './pages/AdminTestsPage'
+export { AdminTestDetailPage } from './pages/AdminTestDetailPage'
+export { AdminPromptsPage } from './pages/AdminPromptsPage'
+export { AdminResourcesPage } from './pages/AdminResourcesPage'

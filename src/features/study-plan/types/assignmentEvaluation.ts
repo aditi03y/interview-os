@@ -8,6 +8,7 @@ export interface AssignmentEvaluation {
   assignmentTitle: string
   repoUrl: string
   qualityScore: number
+  assignmentAccomplishmentScore: number
   reviewedAt: string
   report: RepoEvaluationReport | null
 }

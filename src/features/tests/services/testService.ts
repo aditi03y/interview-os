@@ -104,7 +104,12 @@ interface StartAttemptInput {
 }
 
 export async function startAttempt(input: StartAttemptInput): Promise<ApiResult<TestAttempt>> {
-  const { userId, definition, coveredStudyDays = [], scheduleDay = null } = input
+  const {
+    userId,
+    definition,
+    coveredStudyDays = definition.coveredStudyDays ?? [],
+    scheduleDay = null,
+  } = input
 
   const questionsResult = await fetchQuestionsForDefinition(
     definition.id,
@@ -164,7 +169,9 @@ interface SubmitAttemptInput {
 
 export async function submitAttempt(input: SubmitAttemptInput): Promise<ApiResult<TestAttempt>> {
   const { attempt, questions, answers, autoSubmitted = false, timeSpentSeconds } = input
-  const { score, maxScore, answers: gradedAnswers } = gradeAttempt(questions, answers)
+  const { score, maxScore, answers: gradedAnswers } = gradeAttempt(questions, answers, {
+    sections: attempt.definition?.sections ?? [],
+  })
 
   const status: AttemptStatus = autoSubmitted ? 'auto_submitted' : 'completed'
 

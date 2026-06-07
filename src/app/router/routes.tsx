@@ -1,5 +1,5 @@
 import type { RouteObject } from 'react-router-dom'
-import { ProtectedRoute, PublicRoute } from '@/components/auth'
+import { AdminRoute, ProtectedRoute, PublicRoute } from '@/components/auth'
 import { NotFoundPage, RouteErrorPage } from '@/components/errors'
 import { AppLayout } from '@/components/layout'
 import { ROUTES } from './paths'
@@ -21,6 +21,11 @@ import {
   TestResultsPage,
   TestHistoryPage,
   ViolationDashboardPage,
+  AdminDashboardPage,
+  AdminTestsPage,
+  AdminTestDetailPage,
+  AdminPromptsPage,
+  AdminResourcesPage,
 } from './lazyPages'
 
 export const appRoutes: RouteObject[] = [
@@ -61,6 +66,18 @@ export const appRoutes: RouteObject[] = [
           { path: ROUTES.githubEvaluator.slice(1), element: <GithubEvaluatorPage /> },
           { path: ROUTES.promptLibrary.slice(1), element: <PromptLibraryPage /> },
           { path: ROUTES.settings.slice(1), element: <SettingsPage /> },
+          {
+            path: ROUTES.admin.root.slice(1),
+            element: <AdminRoute />,
+            children: [
+              { index: true, element: <AdminDashboardPage /> },
+              { path: 'tests', element: <AdminTestsPage /> },
+              { path: 'tests/new', element: <AdminTestDetailPage /> },
+              { path: 'tests/:testId', element: <AdminTestDetailPage /> },
+              { path: 'prompts', element: <AdminPromptsPage /> },
+              { path: 'resources', element: <AdminResourcesPage /> },
+            ],
+          },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

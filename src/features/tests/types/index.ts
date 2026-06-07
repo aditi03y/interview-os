@@ -4,6 +4,28 @@ export type QuestionType = 'mcq' | 'subjective' | 'coding'
 export type TestDefinitionType = QuestionType | 'mixed'
 export type ScheduleType = 'revision_2d' | 'cumulative_5d' | 'manual'
 export type AttemptStatus = 'in_progress' | 'completed' | 'auto_submitted' | 'abandoned'
+export type SectionDifficulty = 'Easy' | 'Medium' | 'Hard'
+
+export interface TestSectionNegativeMarking {
+  enabled: boolean
+  /** Points deducted per wrong MCQ answer (e.g. 0.25 = −¼ mark) */
+  penaltyPerWrong: number
+}
+
+export interface TestSectionConfig {
+  id: string
+  label: string
+  questionType: QuestionType
+  questionCount: number
+  difficulty: SectionDifficulty
+  durationMinutes: number
+  pointsPerQuestion: number
+  negativeMarking: TestSectionNegativeMarking
+}
+
+export interface TestGradingConfig {
+  sections: TestSectionConfig[]
+}
 
 export interface McqOption {
   id: string
@@ -32,6 +54,8 @@ export interface TestDefinition {
   topics: string[]
   maxScore: number
   isActive: boolean
+  coveredStudyDays: number[]
+  sections: TestSectionConfig[]
   questionCount?: number
 }
 
@@ -118,4 +142,52 @@ export function parseCodingMetadata(raw: Json | Record<string, unknown>): Coding
   const meta = raw as Record<string, unknown>
   if (!Array.isArray(meta.testCases) || typeof meta.functionName !== 'string') return null
   return meta as unknown as CodingMetadata
+}
+
+export function parseTestSections(raw: Json | unknown): TestSectionConfig[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null
+      const row = item as Record<string, unknown>
+      const questionType = row.questionType
+      if (questionType !== 'mcq' && questionType !== 'subjective' && questionType !== 'coding') {
+        return null
+      }
+      const negative = (row.negativeMarking as Record<string, unknown>) ?? {}
+      return {
+        id: String(row.id ?? questionType),
+        label: String(row.label ?? questionType),
+        questionType,
+        questionCount: Math.max(0, Number(row.questionCount) || 0),
+        difficulty: normalizeSectionDifficulty(row.difficulty),
+        durationMinutes: Math.max(1, Number(row.durationMinutes) || 10),
+        pointsPerQuestion: Math.max(0.5, Number(row.pointsPerQuestion) || 1),
+        negativeMarking: {
+          enabled: Boolean(negative.enabled),
+          penaltyPerWrong: Math.max(0, Number(negative.penaltyPerWrong) || 0.25),
+        },
+      } satisfies TestSectionConfig
+    })
+    .filter((item): item is TestSectionConfig => item != null)
+}
+
+function normalizeSectionDifficulty(value: unknown): SectionDifficulty {
+  if (value === 'Easy' || value === 'Medium' || value === 'Hard') return value
+  return 'Medium'
+}
+
+export function getQuestionSectionId(question: TestQuestion): string | null {
+  const meta = question.metadata
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return null
+  const sectionId = (meta as Record<string, unknown>).sectionId
+  return typeof sectionId === 'string' && sectionId.trim() ? sectionId.trim() : null
+}
+
+export function totalSectionQuestions(sections: TestSectionConfig[]): number {
+  return sections.reduce((sum, section) => sum + section.questionCount, 0)
+}
+
+export function totalSectionDuration(sections: TestSectionConfig[]): number {
+  return sections.reduce((sum, section) => sum + section.durationMinutes, 0)
 }

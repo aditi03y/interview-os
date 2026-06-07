@@ -53,3 +53,18 @@ export const SignUpPage = lazy(() =>
 export const AuthLayout = lazy(() =>
   import('@/features/auth').then((m) => ({ default: m.AuthLayout })),
 )
+export const AdminDashboardPage = lazy(() =>
+  import('@/features/admin').then((m) => ({ default: m.AdminDashboardPage })),
+)
+export const AdminTestsPage = lazy(() =>
+  import('@/features/admin').then((m) => ({ default: m.AdminTestsPage })),
+)
+export const AdminTestDetailPage = lazy(() =>
+  import('@/features/admin').then((m) => ({ default: m.AdminTestDetailPage })),
+)
+export const AdminPromptsPage = lazy(() =>
+  import('@/features/admin').then((m) => ({ default: m.AdminPromptsPage })),
+)
+export const AdminResourcesPage = lazy(() =>
+  import('@/features/admin').then((m) => ({ default: m.AdminResourcesPage })),
+)

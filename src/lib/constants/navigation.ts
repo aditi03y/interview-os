@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Map,
   Settings,
+  Shield,
   Sparkles,
   Target,
   TestTube2,
@@ -109,5 +110,24 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
     ],
   },
 ]
+
+export const ADMIN_NAV_GROUP: NavGroup = {
+  id: 'admin',
+  label: 'Admin',
+  items: [
+    {
+      id: 'admin-console',
+      label: 'Admin Console',
+      path: ROUTES.admin.root,
+      icon: Shield,
+      description: 'Manage tests, prompts, and content',
+    },
+  ],
+}
+
+export function getNavigationGroups(isAdmin: boolean): NavGroup[] {
+  if (!isAdmin) return NAVIGATION_GROUPS
+  return [...NAVIGATION_GROUPS, ADMIN_NAV_GROUP]
+}
 
 export const ALL_NAV_ITEMS = NAVIGATION_GROUPS.flatMap((group) => group.items)
