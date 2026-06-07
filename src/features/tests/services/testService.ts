@@ -4,6 +4,7 @@ import { mapPostgrestError } from '@/lib/supabase/errors'
 import type { ApiResult } from '@/types'
 import { gradeAttempt } from '../lib/scoring'
 import { mapAttemptRow, mapDefinitionRow, mapQuestionRow } from '../lib/mappers'
+import { resolveCoveredStudyDays } from '../lib/scheduler'
 import { totalSectionDuration } from '../types'
 import type {
   AttemptAnswers,
@@ -108,9 +109,14 @@ export async function startAttempt(input: StartAttemptInput): Promise<ApiResult<
   const {
     userId,
     definition,
-    coveredStudyDays = definition.coveredStudyDays ?? [],
+    coveredStudyDays: requestedStudyDays,
     scheduleDay = null,
   } = input
+
+  const coveredStudyDays = resolveCoveredStudyDays(
+    definition.coveredStudyDays ?? [],
+    requestedStudyDays,
+  )
 
   const questionsResult = await fetchQuestionsForDefinition(
     definition.id,

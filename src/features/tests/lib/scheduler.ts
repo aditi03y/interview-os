@@ -20,7 +20,23 @@ export function isCumulativeDue(planDay: number): boolean {
 
 export function getRevisionStudyDays(planDay: number): number[] {
   if (planDay < 2) return []
-  return [planDay - 1, planDay - 2]
+  return [planDay - 1, planDay - 2].filter((day) => day >= 1)
+}
+
+/** Scheduled days ∩ admin-configured days (when admin set any). Filters invalid day numbers. */
+export function resolveCoveredStudyDays(
+  definitionDays: number[],
+  requestedDays?: number[],
+): number[] {
+  const valid = (days: number[]) => days.filter((day) => day >= 1)
+  const def = valid(definitionDays)
+  const req = valid(requestedDays ?? def)
+
+  if (!def.length) return req
+  if (!req.length) return def
+
+  const intersection = req.filter((day) => def.includes(day))
+  return intersection.length ? intersection : def
 }
 
 export function getCumulativeStudyDays(planDay: number): number[] {
