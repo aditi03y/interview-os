@@ -17,16 +17,17 @@ describe('getRevisionStudyDays', () => {
 })
 
 describe('resolveCoveredStudyDays', () => {
-  it('uses admin days for manual starts', () => {
+  it('uses admin-configured days for manual starts', () => {
     expect(resolveCoveredStudyDays([1, 2])).toEqual([1, 2])
   })
 
-  it('intersects scheduled days with admin-configured days', () => {
-    expect(resolveCoveredStudyDays([1, 2], [1, 0])).toEqual([1])
-    expect(resolveCoveredStudyDays([1, 2], [2, 1])).toEqual([2, 1])
+  it('prefers admin days over scheduled days when admin configured them', () => {
+    expect(resolveCoveredStudyDays([1, 2], [1, 0])).toEqual([1, 2])
+    expect(resolveCoveredStudyDays([1, 2], [3, 4])).toEqual([1, 2])
   })
 
-  it('falls back to admin days when intersection is empty', () => {
-    expect(resolveCoveredStudyDays([1, 2], [5, 6])).toEqual([1, 2])
+  it('uses scheduled days when admin left study days empty', () => {
+    expect(resolveCoveredStudyDays([], [2, 1])).toEqual([2, 1])
+    expect(resolveCoveredStudyDays([], [1, 0])).toEqual([1])
   })
 })

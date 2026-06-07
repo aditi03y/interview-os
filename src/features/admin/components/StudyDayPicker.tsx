@@ -57,10 +57,13 @@ export function StudyDayPicker({ label = 'Study days to include', value, onChang
       </div>
       {value.length > 0 ? (
         <p className="text-xs text-muted-foreground">
-          Selected: day{value.length === 1 ? '' : 's'} {value.join(', ')}
+          Selected: day{value.length === 1 ? '' : 's'} {value.join(', ')} — students see questions
+          tagged with these study days only.
         </p>
       ) : (
-        <p className="text-xs text-muted-foreground">No study days selected — content can span any day.</p>
+        <p className="text-xs text-muted-foreground">
+          No study days selected — all questions in this test are included when students start it.
+        </p>
       )}
     </div>
   )

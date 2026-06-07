@@ -23,20 +23,21 @@ export function getRevisionStudyDays(planDay: number): number[] {
   return [planDay - 1, planDay - 2].filter((day) => day >= 1)
 }
 
-/** Scheduled days ∩ admin-configured days (when admin set any). Filters invalid day numbers. */
+/**
+ * Study days used to load questions when starting a test.
+ * When the admin configured days on the test definition, those always win.
+ * Scheduler days apply only when the definition has no study days set.
+ */
 export function resolveCoveredStudyDays(
   definitionDays: number[],
-  requestedDays?: number[],
+  scheduledDays?: number[],
 ): number[] {
   const valid = (days: number[]) => days.filter((day) => day >= 1)
   const def = valid(definitionDays)
-  const req = valid(requestedDays ?? def)
 
-  if (!def.length) return req
-  if (!req.length) return def
+  if (def.length) return def
 
-  const intersection = req.filter((day) => def.includes(day))
-  return intersection.length ? intersection : def
+  return valid(scheduledDays ?? [])
 }
 
 export function getCumulativeStudyDays(planDay: number): number[] {
