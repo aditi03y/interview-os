@@ -894,7 +894,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'study_plan_days_plan_id_fkey'
+            columns: ['plan_id']
+            isOneToOne: false
+            referencedRelation: 'study_plans'
+            referencedColumns: ['id']
+          },
+        ]
       }
       study_plan_items: {
         Row: {
@@ -936,7 +944,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'study_plan_items_day_id_fkey'
+            columns: ['day_id']
+            isOneToOne: false
+            referencedRelation: 'study_plan_days'
+            referencedColumns: ['id']
+          },
+        ]
       }
       study_plan_item_resources: {
         Row: {
@@ -969,7 +985,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'study_plan_item_resources_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'study_plan_items'
+            referencedColumns: ['id']
+          },
+        ]
       }
       study_plan_prompts: {
         Row: {
@@ -999,7 +1023,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'study_plan_prompts_day_id_fkey'
+            columns: ['day_id']
+            isOneToOne: false
+            referencedRelation: 'study_plan_days'
+            referencedColumns: ['id']
+          },
+        ]
       }
       resource_catalog: {
         Row: {
