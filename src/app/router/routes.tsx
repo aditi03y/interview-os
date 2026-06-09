@@ -20,12 +20,15 @@ import {
   TestTakingPage,
   TestResultsPage,
   TestHistoryPage,
+  DsaPracticePage,
+  DsaPracticeSessionPage,
   ViolationDashboardPage,
   AdminDashboardPage,
   AdminTestsPage,
   AdminTestDetailPage,
   AdminPromptsPage,
   AdminResourcesPage,
+  AdminCurriculumPage,
 } from './lazyPages'
 
 export const appRoutes: RouteObject[] = [
@@ -57,6 +60,8 @@ export const appRoutes: RouteObject[] = [
           { path: ROUTES.dsaTracker.slice(1), element: <DsaTrackerPage /> },
           { path: ROUTES.tests.slice(1), element: <TestsPage /> },
           { path: ROUTES.testHistory.slice(1), element: <TestHistoryPage /> },
+          { path: 'tests/practice', element: <DsaPracticePage /> },
+          { path: 'tests/practice/:questionId', element: <DsaPracticeSessionPage /> },
           { path: ROUTES.testViolations.slice(1), element: <ViolationDashboardPage /> },
           { path: 'tests/attempt/:attemptId/results', element: <TestResultsPage /> },
           { path: 'tests/attempt/:attemptId', element: <TestTakingPage /> },
@@ -76,6 +81,7 @@ export const appRoutes: RouteObject[] = [
               { path: 'tests/:testId', element: <AdminTestDetailPage /> },
               { path: 'prompts', element: <AdminPromptsPage /> },
               { path: 'resources', element: <AdminResourcesPage /> },
+              { path: 'curriculum', element: <AdminCurriculumPage /> },
             ],
           },
           { path: '*', element: <NotFoundPage /> },

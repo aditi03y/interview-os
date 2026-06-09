@@ -1,4 +1,4 @@
-import { SDE_ROADMAP_15_DAYS } from '@/features/study-plan/data/roadmap-days'
+import type { RoadmapDay } from '@/features/study-plan/types'
 import type {
   AnalyticsSnapshot,
   HeatmapCell,
@@ -12,13 +12,13 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const TREND_DAYS = 14
 const HEATMAP_WEEKS = 12
 
-export function computeAnalytics(data: RawAnalyticsData): AnalyticsSnapshot {
-  const topicScores = buildTopicScores(data)
+export function computeAnalytics(data: RawAnalyticsData, days: RoadmapDay[]): AnalyticsSnapshot {
+  const topicScores = buildTopicScores(data, days)
   const sorted = [...topicScores].sort((a, b) => a.score - b.score)
   const weakTopics = sorted.filter((t) => t.score < 55).slice(0, 5)
   const strongTopics = [...sorted].reverse().filter((t) => t.score >= 70).slice(0, 5)
 
-  const completionRate = computeCompletionRate(data)
+  const completionRate = computeCompletionRate(data, days)
   const averageTestScore = computeAverageTestScore(data)
   const dsaSuccessRate = computeDsaSuccessRate(data)
   const violationCount = data.violations.length
@@ -63,12 +63,12 @@ export function computeAnalytics(data: RawAnalyticsData): AnalyticsSnapshot {
       dsaSolves: buildDsaSolveTrend(data),
       violations: buildViolationTrend(data),
     },
-    topicRadar: buildRadarData(topicScores),
+    topicRadar: buildRadarData(topicScores, days),
     heatmap: buildHeatmap(data),
   }
 }
 
-function buildTopicScores(data: RawAnalyticsData): TopicInsight[] {
+function buildTopicScores(data: RawAnalyticsData, days: RoadmapDay[]): TopicInsight[] {
   const map = new Map<string, { total: number; weighted: number; source: TopicInsight['source'] }>()
 
   for (const problem of data.dsaProblems) {
@@ -127,7 +127,7 @@ function buildTopicScores(data: RawAnalyticsData): TopicInsight[] {
   }
 
   if (!results.length) {
-    return SDE_ROADMAP_15_DAYS.slice(0, 6).map((day) => ({
+    return days.slice(0, 6).map((day) => ({
       topic: day.title,
       score: 0,
       source: 'study' as const,
@@ -138,8 +138,8 @@ function buildTopicScores(data: RawAnalyticsData): TopicInsight[] {
   return results
 }
 
-function computeCompletionRate(data: RawAnalyticsData): number {
-  const totalDays = SDE_ROADMAP_15_DAYS.length
+function computeCompletionRate(data: RawAnalyticsData, days: RoadmapDay[]): number {
+  const totalDays = days.length
   if (!totalDays) return 0
 
   const completed = data.studyProgress.filter((d) => d.status === 'completed').length
@@ -346,10 +346,10 @@ function buildViolationTrend(data: RawAnalyticsData): TrendPoint[] {
   }))
 }
 
-function buildRadarData(topicScores: TopicInsight[]): RadarPoint[] {
+function buildRadarData(topicScores: TopicInsight[], days: RoadmapDay[]): RadarPoint[] {
   const top = [...topicScores].sort((a, b) => b.score - a.score).slice(0, 8)
   if (!top.length) {
-    return SDE_ROADMAP_15_DAYS.slice(0, 6).map((day) => ({
+    return days.slice(0, 6).map((day) => ({
       topic: day.title.length > 14 ? `${day.title.slice(0, 12)}…` : day.title,
       score: 0,
       fullMark: 100,

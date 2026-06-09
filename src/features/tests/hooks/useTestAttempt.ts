@@ -18,7 +18,7 @@ import {
 import { clearSectionTimerState } from '../lib/sectionTimerPersistence'
 import { useSectionTestTimer } from './useSectionTestTimer'
 import { useTestTimer } from './useTestTimer'
-import type { AttemptAnswers, TestAttempt, TestQuestion } from '../types'
+import type { AttemptAnswers, QuestionAnswer, TestAttempt, TestQuestion } from '../types'
 import { totalSectionDuration } from '../types'
 
 export function useTestAttempt(attemptId: string | undefined) {
@@ -198,12 +198,15 @@ export function useTestAttempt(attemptId: string | undefined) {
     [sectionPlan, sectionTimer.sectionIndex, sectionTimersEnabled],
   )
 
-  const setAnswer = useCallback((questionId: string, value: string) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: { value },
-    }))
-  }, [])
+  const setAnswer = useCallback(
+    (questionId: string, patch: Partial<QuestionAnswer> & { value: string }) => {
+      setAnswers((prev) => ({
+        ...prev,
+        [questionId]: { ...prev[questionId], ...patch, value: patch.value },
+      }))
+    },
+    [],
+  )
 
   const persistAnswers = useCallback(async () => {
     if (!attempt) return
@@ -219,7 +222,14 @@ export function useTestAttempt(attemptId: string | undefined) {
   }, [attempt, persistAnswers])
 
   const currentQuestion = questions[currentIndex]
-  const answeredCount = questions.filter((q) => answers[q.id]?.value?.trim()).length
+  const answeredCount = questions.filter((q) => {
+    const a = answers[q.id]
+    if (!a?.value?.trim()) return false
+    if (q.questionType === 'coding') {
+      return Boolean(a.timeComplexity?.trim() && a.spaceComplexity?.trim())
+    }
+    return true
+  }).length
 
   const sectionBounds = sectionTimersEnabled
     ? getSectionBounds(sectionPlan, sectionTimer.sectionIndex)

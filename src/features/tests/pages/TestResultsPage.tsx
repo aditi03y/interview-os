@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, ShieldAlert, Trophy, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, RotateCcw, ShieldAlert, Trophy, XCircle } from 'lucide-react'
 import { ROUTES } from '@/app/router/paths'
 import { ViolationLog, useViolations } from '@/features/anti-cheat'
 import {
@@ -14,8 +14,14 @@ import {
   Skeleton,
 } from '@/components/ui'
 import { useAuthStore } from '@/stores/authStore'
-import { fetchAttemptById, fetchAttemptQuestions, fetchLeaderboard } from '../services/testService'
+import {
+  countCompletedAttempts,
+  fetchAttemptById,
+  fetchAttemptQuestions,
+  fetchLeaderboard,
+} from '../services/testService'
 import { LeaderboardPanel } from '../components/LeaderboardPanel'
+import { QuestionResultDetail } from '../components/QuestionResultDetail'
 import type { LeaderboardEntry, TestAttempt, TestQuestion } from '../types'
 
 export function TestResultsPage() {
@@ -25,6 +31,7 @@ export function TestResultsPage() {
   const [attempt, setAttempt] = useState<TestAttempt | null>(null)
   const [questions, setQuestions] = useState<TestQuestion[]>([])
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [attemptsUsed, setAttemptsUsed] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -48,13 +55,15 @@ export function TestResultsPage() {
       const loaded = attemptResult.data
       setAttempt(loaded)
 
-      const [questionsResult, leaderboardResult] = await Promise.all([
+      const [questionsResult, leaderboardResult, used] = await Promise.all([
         fetchAttemptQuestions(loaded),
         fetchLeaderboard(loaded.testDefinitionId),
+        countCompletedAttempts(user.id, loaded.testDefinitionId),
       ])
 
       if (questionsResult.data) setQuestions(questionsResult.data)
       if (leaderboardResult.data) setLeaderboard(leaderboardResult.data)
+      setAttemptsUsed(used)
       setLoading(false)
     }
 
@@ -85,16 +94,27 @@ export function TestResultsPage() {
       ? Math.round((attempt.score / attempt.maxScore) * 100)
       : 0
   const passed = pct >= 60
+  const maxAttempts = attempt.definition?.maxAttempts ?? null
+  const canRetake =
+    maxAttempts == null || attemptsUsed < maxAttempts
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Link to={ROUTES.tests}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4" />
             Back to Tests
           </Button>
         </Link>
+        {canRetake ? (
+          <Link to={ROUTES.tests}>
+            <Button size="sm" variant="outline">
+              <RotateCcw className="h-4 w-4" />
+              Retake test
+            </Button>
+          </Link>
+        ) : null}
       </div>
 
       <Card className={passed ? 'border-success/50' : 'border-destructive/30'}>
@@ -105,6 +125,11 @@ export function TestResultsPage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {attempt.autoSubmitted ? 'Auto-submitted when time expired' : 'Submitted manually'}
               </p>
+              {maxAttempts != null ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Attempts used: {attemptsUsed}/{maxAttempts}
+                </p>
+              ) : null}
             </div>
             {passed ? (
               <CheckCircle2 className="h-10 w-10 text-success" />
@@ -134,6 +159,23 @@ export function TestResultsPage() {
       </Card>
 
       <section className="space-y-4">
+        <h2 className="text-lg font-semibold">Your responses</h2>
+        <p className="text-sm text-muted-foreground">
+          Full answers, test cases (including hidden), and complexity grading are shown below.
+        </p>
+        <div className="space-y-4">
+          {questions.map((question, index) => (
+            <QuestionResultDetail
+              key={question.id}
+              question={question}
+              answer={attempt.answers[question.id]}
+              index={index}
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <ShieldAlert className="h-5 w-5 text-warning-foreground" />
@@ -155,38 +197,6 @@ export function TestResultsPage() {
             )}
           </CardContent>
         </Card>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Question Breakdown</h2>
-        <div className="space-y-3">
-          {questions.map((question, index) => {
-            const answer = attempt.answers[question.id]
-            const earned = answer?.pointsEarned ?? 0
-            const correct = answer?.isCorrect
-
-            return (
-              <div key={question.id} className="rounded-lg border border-border p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Q{index + 1} · {question.questionType}
-                    </p>
-                    <p className="font-medium">{question.title}</p>
-                  </div>
-                  <Badge variant={correct ? 'success' : earned > 0 ? 'warning' : 'destructive'}>
-                    {earned}/{question.points}
-                  </Badge>
-                </div>
-                {answer?.value ? (
-                  <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{answer.value}</p>
-                ) : (
-                  <p className="mt-2 text-sm italic text-muted-foreground">No answer submitted</p>
-                )}
-              </div>
-            )
-          })}
-        </div>
       </section>
 
       <section className="space-y-4">

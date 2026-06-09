@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useAuth } from '@/hooks/auth'
 import { useAsyncData } from '@/hooks/useAsyncData'
+import { loadStudyPlanContent } from '@/features/study-plan/lib/studyPlanContentCache'
 import { computeAnalytics } from '../lib/computeAnalytics'
 import { fetchAnalyticsData } from '../services/analyticsService'
 
@@ -9,10 +10,13 @@ export function useAnalytics() {
 
   const fetcher = useCallback(async () => {
     if (!user) return { data: null, error: { message: 'Not authenticated' } }
-    const result = await fetchAnalyticsData(user.id)
+    const [result, plan] = await Promise.all([
+      fetchAnalyticsData(user.id),
+      loadStudyPlanContent(),
+    ])
     if (result.error) return result
     if (!result.data) return { data: null, error: { message: 'No analytics data' } }
-    return { data: computeAnalytics(result.data), error: null }
+    return { data: computeAnalytics(result.data, plan?.days ?? []), error: null }
   }, [user])
 
   const { data, isLoading, error, reload } = useAsyncData(fetcher, [user?.id], {

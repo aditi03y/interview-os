@@ -33,8 +33,6 @@ export const DEFAULT_TEST_SECTIONS: TestSectionConfig[] = [
   },
 ]
 
-export const STUDY_PLAN_DAYS = Array.from({ length: 15 }, (_, i) => i + 1)
-
 export function createEmptySection(
   questionType: QuestionType,
   label: string,

@@ -8,6 +8,7 @@ import {
   Shield,
   Sparkles,
   Target,
+  Code2,
   TestTube2,
   TreePine,
 } from 'lucide-react'
@@ -52,6 +53,13 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         path: ROUTES.tests,
         icon: TestTube2,
         description: 'MCQ and coding assessments',
+      },
+      {
+        id: 'dsa-practice',
+        label: 'DSA Practice',
+        path: ROUTES.dsaPractice,
+        icon: Code2,
+        description: 'Practice coding questions with AI feedback',
       },
       {
         id: 'readiness',

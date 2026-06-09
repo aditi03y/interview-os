@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 import type { Json } from '@/types/database'
 import { mapPostgrestError } from '@/lib/supabase/errors'
 import type { ApiResult } from '@/types'
-import { gradeAttempt } from '../lib/scoring'
+import { gradeAttempt, maxPointsForQuestion } from '../lib/scoring'
 import { mapAttemptRow, mapDefinitionRow, mapQuestionRow } from '../lib/mappers'
 import { resolveCoveredStudyDays } from '../lib/scheduler'
 import { totalSectionDuration } from '../types'
@@ -105,6 +105,21 @@ interface StartAttemptInput {
   scheduleDay?: number
 }
 
+export async function countCompletedAttempts(
+  userId: string,
+  testDefinitionId: string,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('test_attempts')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('test_definition_id', testDefinitionId)
+    .in('status', ['completed', 'auto_submitted'])
+
+  if (error) return 0
+  return count ?? 0
+}
+
 export async function startAttempt(input: StartAttemptInput): Promise<ApiResult<TestAttempt>> {
   const {
     userId,
@@ -112,6 +127,19 @@ export async function startAttempt(input: StartAttemptInput): Promise<ApiResult<
     coveredStudyDays: requestedStudyDays,
     scheduleDay = null,
   } = input
+
+  if (definition.maxAttempts != null) {
+    const used = await countCompletedAttempts(userId, definition.id)
+    if (used >= definition.maxAttempts) {
+      return {
+        data: null,
+        error: {
+          message: `Attempt limit reached (${definition.maxAttempts} attempt${definition.maxAttempts === 1 ? '' : 's'} allowed).`,
+          code: 'MAX_ATTEMPTS',
+        },
+      }
+    }
+  }
 
   const coveredStudyDays = resolveCoveredStudyDays(
     definition.coveredStudyDays ?? [],
@@ -130,7 +158,7 @@ export async function startAttempt(input: StartAttemptInput): Promise<ApiResult<
   }
 
   const questions = questionsResult.data
-  const maxScore = questions.reduce((sum, q) => sum + q.points, 0)
+  const maxScore = questions.reduce((sum, q) => sum + maxPointsForQuestion(q), 0)
   const sectionDuration = totalSectionDuration(definition.sections)
   const durationMinutes =
     sectionDuration > 0 ? sectionDuration : definition.durationMinutes

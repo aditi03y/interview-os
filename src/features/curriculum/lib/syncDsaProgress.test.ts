@@ -1,6 +1,20 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
+import { SDE_ROADMAP_15_DAYS } from '@/features/study-plan/data/roadmap-days'
+import { setStudyPlanContentForTests } from '@/features/study-plan/lib/studyPlanContentCache'
+import { getDsaCurriculum } from '@/features/curriculum/data/dsaCurriculum'
 import { verifyCurriculumConsistency } from '@/features/curriculum/lib/syncDsaProgress'
-import { DSA_CURRICULUM } from '@/features/curriculum/data/dsaCurriculum'
+
+beforeAll(() => {
+  setStudyPlanContentForTests({
+    meta: {
+      id: 'test-plan',
+      slug: 'default',
+      title: 'Test Plan',
+      description: null,
+    },
+    days: SDE_ROADMAP_15_DAYS,
+  })
+})
 
 describe('curriculum consistency', () => {
   it('matches roadmap DSA item count', () => {
@@ -12,7 +26,7 @@ describe('curriculum consistency', () => {
   })
 
   it('has unique curriculum ids', () => {
-    const ids = DSA_CURRICULUM.map((item) => item.id)
+    const ids = getDsaCurriculum().map((item) => item.id)
     expect(new Set(ids).size).toBe(ids.length)
   })
 })

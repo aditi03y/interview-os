@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { BarChart3, History, ShieldAlert, Target, Timer } from 'lucide-react'
+import { BarChart3, Code2, History, ShieldAlert, Target, Timer } from 'lucide-react'
 import { ROUTES } from '@/app/router/paths'
 import {
   Button,
@@ -65,6 +65,10 @@ export function TestsPage() {
             <Button variant="outline" size="sm" onClick={() => navigate(ROUTES.testViolations)}>
               <ShieldAlert className="h-4 w-4" />
               Violations
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate(ROUTES.dsaPractice)}>
+              <Code2 className="h-4 w-4" />
+              DSA Practice
             </Button>
             <Button variant="outline" size="sm" onClick={() => navigate(ROUTES.testHistory)}>
               <History className="h-4 w-4" />

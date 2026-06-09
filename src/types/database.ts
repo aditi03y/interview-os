@@ -551,6 +551,7 @@ export interface Database {
           is_active: boolean
           covered_study_days: number[]
           sections: Json
+          max_attempts: number | null
           created_at: string
           updated_at: string
         }
@@ -567,6 +568,7 @@ export interface Database {
           is_active?: boolean
           covered_study_days?: number[]
           sections?: Json
+          max_attempts?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -583,8 +585,66 @@ export interface Database {
           is_active?: boolean
           covered_study_days?: number[]
           sections?: Json
+          max_attempts?: number | null
           created_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      dsa_practice_attempts: {
+        Row: {
+          id: string
+          user_id: string
+          question_id: string
+          test_definition_id: string | null
+          language: string
+          code: string
+          time_complexity: string
+          space_complexity: string
+          visible_results: Json
+          hidden_results: Json
+          score: number
+          max_score: number
+          complexity_time_correct: boolean
+          complexity_space_correct: boolean
+          ai_analysis: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          question_id: string
+          test_definition_id?: string | null
+          language?: string
+          code: string
+          time_complexity?: string
+          space_complexity?: string
+          visible_results?: Json
+          hidden_results?: Json
+          score?: number
+          max_score?: number
+          complexity_time_correct?: boolean
+          complexity_space_correct?: boolean
+          ai_analysis?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          question_id?: string
+          test_definition_id?: string | null
+          language?: string
+          code?: string
+          time_complexity?: string
+          space_complexity?: string
+          visible_results?: Json
+          hidden_results?: Json
+          score?: number
+          max_score?: number
+          complexity_time_correct?: boolean
+          complexity_space_correct?: boolean
+          ai_analysis?: string | null
+          created_at?: string
         }
         Relationships: []
       }
@@ -770,6 +830,177 @@ export interface Database {
           },
         ]
       }
+      study_plans: {
+        Row: {
+          id: string
+          slug: string
+          title: string
+          description: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          title: string
+          description?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          slug?: string
+          title?: string
+          description?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      study_plan_days: {
+        Row: {
+          id: string
+          plan_id: string
+          day_number: number
+          title: string
+          subtitle: string
+          estimated_minutes: number
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          plan_id: string
+          day_number: number
+          title: string
+          subtitle?: string
+          estimated_minutes?: number
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          plan_id?: string
+          day_number?: number
+          title?: string
+          subtitle?: string
+          estimated_minutes?: number
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      study_plan_items: {
+        Row: {
+          id: string
+          day_id: string
+          section: string
+          title: string
+          description: string | null
+          sort_order: number
+          leetcode_slug: string | null
+          difficulty: string | null
+          topic: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          day_id: string
+          section: string
+          title: string
+          description?: string | null
+          sort_order?: number
+          leetcode_slug?: string | null
+          difficulty?: string | null
+          topic?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          day_id?: string
+          section?: string
+          title?: string
+          description?: string | null
+          sort_order?: number
+          leetcode_slug?: string | null
+          difficulty?: string | null
+          topic?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      study_plan_item_resources: {
+        Row: {
+          id: string
+          item_id: string
+          title: string
+          url: string
+          resource_type: string | null
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          item_id: string
+          title: string
+          url: string
+          resource_type?: string | null
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          title?: string
+          url?: string
+          resource_type?: string | null
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      study_plan_prompts: {
+        Row: {
+          id: string
+          day_id: string
+          title: string
+          prompt_text: string
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          day_id: string
+          title: string
+          prompt_text: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          day_id?: string
+          title?: string
+          prompt_text?: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       resource_catalog: {
         Row: {
           id: string
@@ -886,7 +1117,12 @@ export interface Database {
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      delete_study_plan_day_and_renumber: {
+        Args: { p_plan_id: string; p_day_number: number }
+        Returns: undefined
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

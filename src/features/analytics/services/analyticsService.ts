@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { mapPostgrestError } from '@/lib/supabase/errors'
-import { SDE_ROADMAP_15_DAYS } from '@/features/study-plan/data/roadmap-days'
+import { loadStudyPlanContent } from '@/features/study-plan/lib/studyPlanContentCache'
+import { getDayTitleMap } from '@/features/study-plan/services/studyPlanContentService'
 import type { ApiResult } from '@/types'
 import type {
   DsaProblemRow,
@@ -10,9 +11,10 @@ import type {
   ViolationRow,
 } from '../types'
 
-const dayTitleMap = new Map(SDE_ROADMAP_15_DAYS.map((d) => [d.day, d.title]))
-
 export async function fetchAnalyticsData(userId: string): Promise<ApiResult<RawAnalyticsData>> {
+  const plan = await loadStudyPlanContent()
+  const dayTitleMap = getDayTitleMap(plan?.days ?? [])
+
   const [studyResult, dsaResult, testsResult, violationsResult] = await Promise.all([
     supabase
       .from('study_day_progress')

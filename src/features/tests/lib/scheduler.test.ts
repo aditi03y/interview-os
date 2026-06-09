@@ -6,13 +6,13 @@ describe('getRevisionStudyDays', () => {
     expect(getRevisionStudyDays(1)).toEqual([])
   })
 
-  it('excludes invalid day 0 on plan day 2', () => {
-    expect(getRevisionStudyDays(2)).toEqual([1])
+  it('covers study days 1 and 2 on first revision (plan day 2)', () => {
+    expect(getRevisionStudyDays(2)).toEqual([1, 2])
   })
 
-  it('returns the previous two study days from plan day 3 onward', () => {
-    expect(getRevisionStudyDays(3)).toEqual([2, 1])
-    expect(getRevisionStudyDays(4)).toEqual([3, 2])
+  it('covers the current two-day block ending on plan day (never day 0)', () => {
+    expect(getRevisionStudyDays(4)).toEqual([3, 4])
+    expect(getRevisionStudyDays(6)).toEqual([5, 6])
   })
 })
 
@@ -27,7 +27,7 @@ describe('resolveCoveredStudyDays', () => {
   })
 
   it('uses scheduled days when admin left study days empty', () => {
-    expect(resolveCoveredStudyDays([], [2, 1])).toEqual([2, 1])
-    expect(resolveCoveredStudyDays([], [1, 0])).toEqual([1])
+    expect(resolveCoveredStudyDays([], [3, 4])).toEqual([3, 4])
+    expect(resolveCoveredStudyDays([], [1, 2])).toEqual([1, 2])
   })
 })

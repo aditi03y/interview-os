@@ -22,6 +22,7 @@ interface DefinitionRow {
   is_active: boolean
   covered_study_days?: number[] | null
   sections?: Json | null
+  max_attempts?: number | null
 }
 
 interface QuestionRow {
@@ -75,6 +76,7 @@ export function mapDefinitionRow(row: DefinitionRow, questionCount?: number): Te
     coveredStudyDays: row.covered_study_days ?? [],
     sections: parseTestSections(row.sections),
     questionCount,
+    maxAttempts: row.max_attempts ?? null,
   }
 }
 

@@ -1,18 +1,16 @@
-import { SDE_ROADMAP_15_DAYS } from '@/features/study-plan/data/roadmap-days'
+import { getCachedStudyPlanDays } from '@/features/study-plan/lib/studyPlanContentCache'
 import { supabase } from '@/lib/supabase'
 import { mapPostgrestError } from '@/lib/supabase/errors'
 import type { ApiResult } from '@/types'
 import type { Difficulty } from '@/types'
-import { getCurriculumDsaItem, DSA_CURRICULUM } from '../data/dsaCurriculum'
-
-export { DSA_CURRICULUM }
+import { getCurriculumDsaItem, getDsaCurriculum } from '../data/dsaCurriculum'
 
 export function getCurriculumDsaCountForDay(dayNumber: number): number {
-  return DSA_CURRICULUM.filter((item) => item.dayNumber === dayNumber).length
+  return getDsaCurriculum().filter((item) => item.dayNumber === dayNumber).length
 }
 
 export function getTotalCurriculumDsaCount(): number {
-  return DSA_CURRICULUM.length
+  return getDsaCurriculum().length
 }
 
 export function verifyCurriculumConsistency(): {
@@ -23,10 +21,12 @@ export function verifyCurriculumConsistency(): {
 } {
   const mismatches: string[] = []
   let roadmapDsaCount = 0
+  const curriculum = getDsaCurriculum()
+  const days = getCachedStudyPlanDays()
 
-  for (const day of SDE_ROADMAP_15_DAYS) {
+  for (const day of days) {
     roadmapDsaCount += day.dsa.length
-    const curriculumForDay = DSA_CURRICULUM.filter((c) => c.dayNumber === day.day)
+    const curriculumForDay = curriculum.filter((c) => c.dayNumber === day.day)
 
     if (curriculumForDay.length !== day.dsa.length) {
       mismatches.push(
@@ -47,9 +47,9 @@ export function verifyCurriculumConsistency(): {
   }
 
   return {
-    valid: mismatches.length === 0 && roadmapDsaCount === DSA_CURRICULUM.length,
+    valid: mismatches.length === 0 && roadmapDsaCount === curriculum.length,
     roadmapDsaCount,
-    curriculumCount: DSA_CURRICULUM.length,
+    curriculumCount: curriculum.length,
     mismatches,
   }
 }
@@ -124,7 +124,7 @@ export async function syncDsaItemWithTracker(
 export async function seedMissingCurriculumProblems(userId: string): Promise<number> {
   let created = 0
 
-  for (const item of DSA_CURRICULUM) {
+  for (const item of getDsaCurriculum()) {
     const { data: existing } = await supabase
       .from('dsa_progress')
       .select('id')

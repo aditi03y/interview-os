@@ -1,4 +1,4 @@
-import { SDE_ROADMAP_15_DAYS } from '@/features/study-plan/data/roadmap-days'
+import type { RoadmapDay } from '@/features/study-plan/types'
 import { COMPANY_MAP, TARGET_COMPANIES, TOPIC_ALIASES } from '../data/companies'
 import type {
   CompanyReadiness,
@@ -11,13 +11,13 @@ import type {
   WeakArea,
 } from '../types'
 
-export function computeReadiness(data: RawReadinessData): ReadinessSnapshot {
-  const pillars = computePillarScores(data)
+export function computeReadiness(data: RawReadinessData, days: RoadmapDay[]): ReadinessSnapshot {
+  const pillars = computePillarScores(data, days)
   const topicScores = buildTopicScores(data)
   const topicMap = new Map(topicScores.map((t) => [normalizeTopicKey(t.topic), t.score]))
 
   const companies = TARGET_COMPANIES.map((profile) =>
-    computeCompanyReadiness(profile.id, pillars, topicMap, profile),
+    computeCompanyReadiness(profile.id, pillars, topicMap, profile, days),
   )
 
   const overallScore = Math.round(
@@ -25,7 +25,7 @@ export function computeReadiness(data: RawReadinessData): ReadinessSnapshot {
   )
 
   const weakAreas = buildWeakAreas(pillars, topicScores, companies)
-  const recommendedTopics = buildRecommendations(topicScores, companies, data)
+  const recommendedTopics = buildRecommendations(topicScores, companies, data, days)
 
   return {
     overallScore,
@@ -39,11 +39,11 @@ export function computeReadiness(data: RawReadinessData): ReadinessSnapshot {
   }
 }
 
-function computePillarScores(data: RawReadinessData): PillarScores {
+function computePillarScores(data: RawReadinessData, days: RoadmapDay[]): PillarScores {
   return {
     dsa: computeDsaScore(data),
     tests: computeTestScore(data),
-    study: computeStudyScore(data),
+    study: computeStudyScore(data, days),
     github: computeGithubScore(data),
   }
 }
@@ -83,8 +83,8 @@ function computeTestScore(data: RawReadinessData): number {
   return Math.round(Math.min(100, avg + volumeBonus))
 }
 
-function computeStudyScore(data: RawReadinessData): number {
-  const totalDays = SDE_ROADMAP_15_DAYS.length
+function computeStudyScore(data: RawReadinessData, days: RoadmapDay[]): number {
+  const totalDays = days.length
   if (!totalDays) return 0
 
   const completed = data.studyProgress.filter((d) => d.status === 'completed').length
@@ -142,6 +142,7 @@ function computeCompanyReadiness(
   pillars: PillarScores,
   topicMap: Map<string, number>,
   profile: (typeof TARGET_COMPANIES)[number],
+  days: RoadmapDay[],
 ): CompanyReadiness {
   const base =
     pillars.dsa * profile.weights.dsa +
@@ -149,7 +150,7 @@ function computeCompanyReadiness(
     pillars.study * profile.weights.study +
     pillars.github * profile.weights.github
 
-  const topicAlignment = computeTopicAlignment(profile.priorityTopics, topicMap)
+  const topicAlignment = computeTopicAlignment(profile.priorityTopics, topicMap, days)
   const alignedScore = Math.round(base * 0.75 + topicAlignment * 0.25)
 
   const gap = profile.benchmark - alignedScore
@@ -169,11 +170,15 @@ function computeCompanyReadiness(
   }
 }
 
-function computeTopicAlignment(priorityTopics: string[], topicMap: Map<string, number>): number {
+function computeTopicAlignment(
+  priorityTopics: string[],
+  topicMap: Map<string, number>,
+  days: RoadmapDay[],
+): number {
   const scores: number[] = []
 
   for (const topic of priorityTopics) {
-    const matched = findTopicScore(topic, topicMap)
+    const matched = findTopicScore(topic, topicMap, days)
     scores.push(matched ?? 0)
   }
 
@@ -181,7 +186,11 @@ function computeTopicAlignment(priorityTopics: string[], topicMap: Map<string, n
   return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
 }
 
-function findTopicScore(canonicalTopic: string, topicMap: Map<string, number>): number | null {
+function findTopicScore(
+  canonicalTopic: string,
+  topicMap: Map<string, number>,
+  days: RoadmapDay[],
+): number | null {
   const key = normalizeTopicKey(canonicalTopic)
   if (topicMap.has(key)) return topicMap.get(key)!
 
@@ -191,7 +200,7 @@ function findTopicScore(canonicalTopic: string, topicMap: Map<string, number>): 
     if (mapKey.includes(key) || key.includes(mapKey)) return score
   }
 
-  for (const day of SDE_ROADMAP_15_DAYS) {
+  for (const day of days) {
     if (day.title.toLowerCase().includes(key) || key.includes(day.title.toLowerCase())) {
       const dayScore = topicMap.get(normalizeTopicKey(day.title))
       if (dayScore != null) return dayScore
@@ -259,6 +268,7 @@ function buildRecommendations(
   topicScores: TopicScore[],
   companies: CompanyReadiness[],
   data: RawReadinessData,
+  days: RoadmapDay[],
 ): RecommendedTopic[] {
   const recs: RecommendedTopic[] = []
   const topicMap = new Map(topicScores.map((t) => [normalizeTopicKey(t.topic), t.score]))
@@ -266,7 +276,7 @@ function buildRecommendations(
   for (const company of [...companies].sort((a, b) => a.score - b.score).slice(0, 4)) {
     const profile = COMPANY_MAP.get(company.id)!
     for (const topic of profile.priorityTopics) {
-      const score = findTopicScore(topic, topicMap) ?? 0
+      const score = findTopicScore(topic, topicMap, days) ?? 0
       if (score >= 70) continue
 
       const existing = recs.find((r) => normalizeTopicKey(r.topic) === normalizeTopicKey(topic))
@@ -286,7 +296,7 @@ function buildRecommendations(
     }
   }
 
-  const incompleteDays = SDE_ROADMAP_15_DAYS.filter((day) => {
+  const incompleteDays = days.filter((day) => {
     const progress = data.studyProgress.find((d) => d.dayNumber === day.day)
     return !progress || progress.status !== 'completed'
   })

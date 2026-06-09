@@ -5,7 +5,9 @@ import type {
   TestGradingConfig,
   TestQuestion,
 } from '../types'
-import { getQuestionSectionId } from '../types'
+import { getQuestionSectionId, isCodingMetadata } from '../types'
+import { gradeComplexityAnswer, COMPLEXITY_MARK_EACH } from './complexityGrading'
+import { runCodingTestSuite } from './codingRunner'
 
 export interface GradeResult {
   answers: AttemptAnswers
@@ -24,11 +26,11 @@ export function gradeAttempt(
   const sectionById = new Map((grading?.sections ?? []).map((section) => [section.id, section]))
 
   for (const question of questions) {
-    maxScore += question.points
     const existing = graded[question.id] ?? { value: '' }
     const result = gradeQuestion(question, existing)
     graded[question.id] = result
     score += result.pointsEarned ?? 0
+    maxScore += maxPointsForQuestion(question)
 
     const sectionId = getQuestionSectionId(question)
     const section = sectionId ? sectionById.get(sectionId) : undefined
@@ -51,12 +53,22 @@ export function gradeAttempt(
   }
 }
 
+export function maxPointsForQuestion(question: TestQuestion): number {
+  if (question.questionType !== 'coding') return question.points
+  const meta = isCodingMetadata(question.metadata) ? question.metadata : null
+  let complexityMax = 0
+  if (meta?.expectedTimeComplexity) complexityMax += COMPLEXITY_MARK_EACH
+  if (meta?.expectedSpaceComplexity) complexityMax += COMPLEXITY_MARK_EACH
+  return question.points + complexityMax
+}
+
 function gradeQuestion(question: TestQuestion, answer: QuestionAnswer): QuestionAnswer {
   const value = answer.value?.trim() ?? ''
 
   if (question.questionType === 'mcq') {
     const isCorrect = value.length > 0 && value === question.correctAnswer
     return {
+      ...answer,
       value,
       isCorrect,
       pointsEarned: isCorrect ? question.points : 0,
@@ -73,6 +85,7 @@ function gradeQuestion(question: TestQuestion, answer: QuestionAnswer): Question
     else if (wordCount >= 8) ratio = 0.25
 
     return {
+      ...answer,
       value,
       isCorrect: ratio >= 0.5,
       pointsEarned: roundScore(question.points * ratio),
@@ -81,66 +94,55 @@ function gradeQuestion(question: TestQuestion, answer: QuestionAnswer): Question
   }
 
   if (question.questionType === 'coding') {
-    const meta = question.metadata as { testCases?: unknown[]; functionName?: string }
+    const meta = isCodingMetadata(question.metadata) ? question.metadata : null
     if (!meta?.testCases?.length || !value) {
-      return { value, isCorrect: false, pointsEarned: 0, graded: true }
+      return {
+        ...answer,
+        value,
+        isCorrect: false,
+        pointsEarned: 0,
+        testResults: [],
+        graded: true,
+      }
     }
 
-    const { passed, total } = runCodingTests(value, meta as CodingMetadata)
-    const ratio = total > 0 ? passed / total : 0
+    const run = runCodingTestSuite(value, meta, {
+      includeHidden: true,
+      language: answer.language ?? 'javascript',
+    })
+
+    const caseRatio = run.total > 0 ? run.passed / run.total : 0
+    const casePoints = roundScore(question.points * caseRatio)
+
+    const timeGrade = gradeComplexityAnswer(answer.timeComplexity, meta.expectedTimeComplexity)
+    const spaceGrade = gradeComplexityAnswer(answer.spaceComplexity, meta.expectedSpaceComplexity)
+
+    const complexityPoints = timeGrade.points + spaceGrade.points
+    const totalPoints = roundScore(casePoints + complexityPoints)
+    const allCasesPassed = run.total > 0 && run.passed === run.total
+
     return {
+      ...answer,
       value,
-      isCorrect: ratio === 1,
-      pointsEarned: roundScore(question.points * ratio),
+      testResults: run.results,
+      complexityTimeCorrect: timeGrade.correct,
+      complexitySpaceCorrect: spaceGrade.correct,
+      isCorrect: allCasesPassed && timeGrade.correct && spaceGrade.correct,
+      pointsEarned: totalPoints,
       graded: true,
     }
   }
 
-  return { value, pointsEarned: 0, graded: true }
+  return { ...answer, value, pointsEarned: 0, graded: true }
 }
 
+/** @deprecated use runCodingTestSuite */
 export function runCodingTests(
   code: string,
   meta: CodingMetadata,
 ): { passed: number; total: number } {
-  const { testCases, functionName } = meta
-  let passed = 0
-
-  for (const testCase of testCases) {
-    try {
-      const fn = new Function(
-        `${code}\nreturn typeof ${functionName} === 'function' ? ${functionName} : null;`,
-      )()
-      if (typeof fn !== 'function') continue
-
-      const args = Object.values(testCase.input)
-      const result = fn(...args)
-      if (deepEqual(result, testCase.expected)) passed += 1
-    } catch {
-      // failed test case
-    }
-  }
-
-  return { passed, total: testCases.length }
-}
-
-function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true
-  if (a == null || b == null) return a === b
-  if (typeof a !== typeof b) return false
-  if (typeof a !== 'object') return false
-
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false
-    return a.every((item, index) => deepEqual(item, b[index]))
-  }
-
-  const aObj = a as Record<string, unknown>
-  const bObj = b as Record<string, unknown>
-  const aKeys = Object.keys(aObj)
-  const bKeys = Object.keys(bObj)
-  if (aKeys.length !== bKeys.length) return false
-  return aKeys.every((key) => deepEqual(aObj[key], bObj[key]))
+  const run = runCodingTestSuite(code, meta, { includeHidden: true })
+  return { passed: run.passed, total: run.total }
 }
 
 function roundScore(value: number): number {

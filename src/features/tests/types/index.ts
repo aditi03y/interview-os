@@ -36,11 +36,28 @@ export interface McqOption {
 export interface CodingTestCase {
   input: Record<string, unknown>
   expected: unknown
+  /** Hidden from student during test; revealed after submit */
+  hidden?: boolean
+  label?: string
 }
 
 export interface CodingMetadata {
   testCases: CodingTestCase[]
   functionName: string
+  languages?: string[]
+  starterCodeByLanguage?: Record<string, string>
+  expectedTimeComplexity?: string
+  expectedSpaceComplexity?: string
+}
+
+export interface CodingTestCaseResult {
+  index: number
+  hidden: boolean
+  passed: boolean
+  input: Record<string, unknown>
+  expected: unknown
+  actual: unknown | null
+  error: string | null
 }
 
 export interface TestDefinition {
@@ -57,6 +74,8 @@ export interface TestDefinition {
   coveredStudyDays: number[]
   sections: TestSectionConfig[]
   questionCount?: number
+  /** Max completed attempts per user; null = unlimited */
+  maxAttempts: number | null
 }
 
 export interface TestQuestion {
@@ -78,6 +97,12 @@ export interface TestQuestion {
 
 export interface QuestionAnswer {
   value: string
+  language?: string
+  timeComplexity?: string
+  spaceComplexity?: string
+  testResults?: CodingTestCaseResult[]
+  complexityTimeCorrect?: boolean
+  complexitySpaceCorrect?: boolean
   isCorrect?: boolean
   pointsEarned?: number
   graded?: boolean
@@ -141,7 +166,28 @@ export function parseCodingMetadata(raw: Json | Record<string, unknown>): Coding
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
   const meta = raw as Record<string, unknown>
   if (!Array.isArray(meta.testCases) || typeof meta.functionName !== 'string') return null
-  return meta as unknown as CodingMetadata
+  return {
+    functionName: meta.functionName,
+    testCases: meta.testCases as CodingTestCase[],
+    languages: Array.isArray(meta.languages) ? (meta.languages as string[]) : undefined,
+    starterCodeByLanguage:
+      meta.starterCodeByLanguage && typeof meta.starterCodeByLanguage === 'object'
+        ? (meta.starterCodeByLanguage as Record<string, string>)
+        : undefined,
+    expectedTimeComplexity:
+      typeof meta.expectedTimeComplexity === 'string' ? meta.expectedTimeComplexity : undefined,
+    expectedSpaceComplexity:
+      typeof meta.expectedSpaceComplexity === 'string' ? meta.expectedSpaceComplexity : undefined,
+  }
+}
+
+export function isCodingMetadata(meta: CodingMetadata | Record<string, unknown>): meta is CodingMetadata {
+  return Boolean(
+    meta &&
+      typeof meta === 'object' &&
+      'functionName' in meta &&
+      Array.isArray((meta as CodingMetadata).testCases),
+  )
 }
 
 export function parseTestSections(raw: Json | unknown): TestSectionConfig[] {

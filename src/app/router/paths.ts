@@ -7,6 +7,8 @@ export const ROUTES = {
   testViolations: '/tests/violations',
   testAttempt: (attemptId: string) => `/tests/attempt/${attemptId}`,
   testResults: (attemptId: string) => `/tests/attempt/${attemptId}/results`,
+  dsaPractice: '/tests/practice',
+  dsaPracticeQuestion: (questionId: string) => `/tests/practice/${questionId}`,
   readiness: '/readiness',
   analytics: '/analytics',
   aiMentor: '/ai-mentor',
@@ -20,6 +22,7 @@ export const ROUTES = {
     testDetail: (testId: string) => `/admin/tests/${testId}`,
     prompts: '/admin/prompts',
     resources: '/admin/resources',
+    curriculum: '/admin/curriculum',
   },
   auth: {
     login: '/auth/login',

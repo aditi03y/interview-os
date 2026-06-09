@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, FileText, Link2, Shield, TestTube2 } from 'lucide-react'
+import { BookOpen, CalendarDays, FileText, Link2, Shield, TestTube2 } from 'lucide-react'
 import { ROUTES } from '@/app/router/paths'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, PageHeader } from '@/components/ui'
 
@@ -21,6 +21,12 @@ const ADMIN_SECTIONS = [
     description: 'Add, publish, or remove prompts shown in the Prompt Library tool.',
     href: ROUTES.admin.prompts,
     icon: BookOpen,
+  },
+  {
+    title: 'Study Plan Curriculum',
+    description: 'Configure days, theory, DSA, assignments, resources, and AI prompts.',
+    href: ROUTES.admin.curriculum,
+    icon: CalendarDays,
   },
   {
     title: 'Study Resources',

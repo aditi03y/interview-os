@@ -3,7 +3,7 @@ import { TestTimer } from './TestTimer'
 import { QuestionMcq } from './QuestionMcq'
 import { QuestionSubjective } from './QuestionSubjective'
 import { QuestionCoding } from './QuestionCoding'
-import type { AttemptAnswers, TestQuestion } from '../types'
+import type { AttemptAnswers, QuestionAnswer, TestQuestion } from '../types'
 import type { SectionPlanItem } from '../lib/sectionPlan'
 
 interface TestTakingLayoutProps {
@@ -25,7 +25,7 @@ interface TestTakingLayoutProps {
   overallRemainingSeconds?: number
   sectionPlan?: SectionPlanItem[]
   canAdvanceSectionEarly?: boolean
-  onAnswer: (questionId: string, value: string) => void
+  onAnswer: (questionId: string, patch: Partial<QuestionAnswer> & { value: string }) => void
   onSelectQuestion: (index: number) => void
   onPrev: () => void
   onNext: () => void
@@ -160,22 +160,22 @@ export function TestTakingLayout({
               <QuestionMcq
                 options={question.options}
                 value={answerValue}
-                onChange={(v) => onAnswer(question.id, v)}
+                onChange={(v) => onAnswer(question.id, { value: v })}
                 disabled={submitting}
               />
             ) : null}
             {question.questionType === 'subjective' ? (
               <QuestionSubjective
                 value={answerValue}
-                onChange={(v) => onAnswer(question.id, v)}
+                onChange={(v) => onAnswer(question.id, { value: v })}
                 rubric={question.rubric}
                 disabled={submitting}
               />
             ) : null}
             {question.questionType === 'coding' ? (
               <QuestionCoding
-                value={answerValue}
-                onChange={(v) => onAnswer(question.id, v)}
+                answer={answers[question.id] ?? { value: answerValue }}
+                onChange={(patch) => onAnswer(question.id, patch)}
                 starterCode={question.starterCode}
                 metadata={question.metadata}
                 disabled={submitting}

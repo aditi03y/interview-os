@@ -17,6 +17,7 @@ export interface TestDefinitionInput {
   isActive?: boolean
   coveredStudyDays?: number[]
   sections?: TestSectionConfig[]
+  maxAttempts?: number | null
 }
 
 export interface TestQuestionInput {
@@ -78,6 +79,7 @@ export async function createTestDefinitionAdmin(
       is_active: input.isActive ?? true,
       covered_study_days: input.coveredStudyDays ?? [],
       sections: (input.sections ?? []) as unknown as Json,
+      max_attempts: input.maxAttempts ?? null,
     })
     .select('*')
     .single()
@@ -110,6 +112,7 @@ export async function updateTestDefinitionAdmin(
         ? { covered_study_days: input.coveredStudyDays }
         : {}),
       ...(input.sections !== undefined ? { sections: input.sections as unknown as Json } : {}),
+      ...(input.maxAttempts !== undefined ? { max_attempts: input.maxAttempts } : {}),
     })
     .eq('id', id)
     .select('*')

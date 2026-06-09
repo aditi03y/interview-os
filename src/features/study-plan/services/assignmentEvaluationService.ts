@@ -19,6 +19,7 @@ export async function evaluateAssignmentRepo(input: {
     getRoadmapAssignment(input.assignmentId) ?? {
       dayNumber: input.dayNumber,
       dayTitle: `Day ${input.dayNumber}`,
+      daySubtitle: '',
       assignment: {
         id: input.assignmentId,
         title: input.assignmentTitle,

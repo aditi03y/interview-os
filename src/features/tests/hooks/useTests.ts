@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/auth'
 import { toast } from '@/lib/toast'
+import { loadStudyPlanContent } from '@/features/study-plan/lib/studyPlanContentCache'
 import {
   buildScheduledSlots,
   getPlanDay,
@@ -12,6 +13,7 @@ import {
   fetchUserAttempts,
   startAttempt,
 } from '../services/testService'
+import type { RoadmapDay } from '@/features/study-plan/types'
 import type { ScheduledTestSlot, ScoreSummary, TestAttempt, TestDefinition } from '../types'
 
 export function useTests() {
@@ -23,6 +25,7 @@ export function useTests() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [startingId, setStartingId] = useState<string | null>(null)
+  const [studyPlanDays, setStudyPlanDays] = useState<RoadmapDay[]>([])
 
   const anchorDate = useMemo(() => {
     if (user?.createdAt) return new Date(user.createdAt)
@@ -47,8 +50,8 @@ export function useTests() {
   }, [attempts])
 
   const scheduledSlots = useMemo(
-    () => buildScheduledSlots(definitions, planDay, completedScheduleKeys),
-    [definitions, planDay, completedScheduleKeys],
+    () => buildScheduledSlots(definitions, planDay, completedScheduleKeys, studyPlanDays),
+    [definitions, planDay, completedScheduleKeys, studyPlanDays],
   )
 
   const manualTests = useMemo(
@@ -65,11 +68,13 @@ export function useTests() {
       setLoading(true)
       setError(null)
 
-      const [defsResult, attemptsResult, summaryResult] = await Promise.all([
+      const [defsResult, attemptsResult, summaryResult, plan] = await Promise.all([
         fetchTestDefinitions(),
         fetchUserAttempts(user.id),
         fetchScoreSummary(user.id),
+        loadStudyPlanContent(),
       ])
+      setStudyPlanDays(plan?.days ?? [])
 
       if (cancelled) return
 
@@ -95,11 +100,13 @@ export function useTests() {
     setLoading(true)
     setError(null)
 
-    const [defsResult, attemptsResult, summaryResult] = await Promise.all([
+    const [defsResult, attemptsResult, summaryResult, plan] = await Promise.all([
       fetchTestDefinitions(),
       fetchUserAttempts(user.id),
       fetchScoreSummary(user.id),
+      loadStudyPlanContent(true),
     ])
+    setStudyPlanDays(plan?.days ?? [])
 
     if (defsResult.error) setError(defsResult.error.message)
     else setDefinitions(defsResult.data ?? [])

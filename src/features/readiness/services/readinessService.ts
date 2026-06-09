@@ -1,13 +1,16 @@
 import { supabase } from '@/lib/supabase'
 import { mapPostgrestError } from '@/lib/supabase/errors'
-import { SDE_ROADMAP_15_DAYS } from '@/features/study-plan/data/roadmap-days'
+import { loadStudyPlanContent } from '@/features/study-plan/lib/studyPlanContentCache'
+import { getDayTitleMap } from '@/features/study-plan/services/studyPlanContentService'
 import type { ApiResult } from '@/types'
 import { computeReadiness } from '../lib/computeReadiness'
 import type { RawReadinessData, ReadinessSnapshot } from '../types'
 
-const dayTitleMap = new Map(SDE_ROADMAP_15_DAYS.map((d) => [d.day, d.title]))
-
 export async function fetchReadinessSnapshot(userId: string): Promise<ApiResult<ReadinessSnapshot>> {
+  const plan = await loadStudyPlanContent()
+  const days = plan?.days ?? []
+  const dayTitleMap = getDayTitleMap(days)
+
   const [dsaResult, testsResult, studyResult, githubResult] = await Promise.all([
     supabase
       .from('dsa_progress')
@@ -58,5 +61,5 @@ export async function fetchReadinessSnapshot(userId: string): Promise<ApiResult<
     })),
   }
 
-  return { data: computeReadiness(raw), error: null }
+  return { data: computeReadiness(raw, days), error: null }
 }

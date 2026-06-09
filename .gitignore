@@ -17,6 +17,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# One-time local seed SQL (run manually, do not commit)
+scripts/seed-study-plan-once.sql
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -57,6 +57,7 @@ const emptyDefinition: TestDefinitionInput = {
   isActive: true,
   coveredStudyDays: [],
   sections: cloneSections(DEFAULT_TEST_SECTIONS),
+  maxAttempts: null,
 }
 
 function emptyQuestion(type: QuestionType = 'mcq'): TestQuestionInput {
@@ -144,6 +145,7 @@ export function AdminTestDetailPage() {
         isActive: d.isActive,
         coveredStudyDays: d.coveredStudyDays,
         sections: loadedSections,
+        maxAttempts: d.maxAttempts,
       })
       setQuestions(qResult.data ?? [])
       setLoading(false)
@@ -460,6 +462,21 @@ export function AdminTestDetailPage() {
               setDefinition((d) => ({ ...d, durationMinutes }))
             }
           />
+          <DraftNumberInput
+            label="Max attempts per user"
+            min={1}
+            emptyValue={0}
+            value={definition.maxAttempts ?? 0}
+            onChange={(maxAttempts) =>
+              setDefinition((d) => ({
+                ...d,
+                maxAttempts: maxAttempts > 0 ? maxAttempts : null,
+              }))
+            }
+          />
+          <p className="text-xs text-muted-foreground">
+            Leave empty (0) for unlimited reattempts. Students see full answers after each submit.
+          </p>
           <p className="text-xs text-muted-foreground md:col-span-2">
             Duration auto-sums section times on save when sections are configured.
           </p>
@@ -657,7 +674,7 @@ export function AdminTestDetailPage() {
                 className="min-h-[120px] font-mono text-xs"
               />
               <Textarea
-                label="Metadata (JSON — testCases, functionName)"
+                label="Metadata (JSON)"
                 value={JSON.stringify(questionForm.metadata ?? {}, null, 2)}
                 onChange={(e) => {
                   try {
@@ -668,6 +685,10 @@ export function AdminTestDetailPage() {
                 }}
                 className="min-h-[100px] font-mono text-xs"
               />
+              <p className="text-xs text-muted-foreground">
+                Include functionName, testCases (set hidden: true for grading-only cases),
+                expectedTimeComplexity, expectedSpaceComplexity, and optional languages array.
+              </p>
             </>
           ) : null}
           <div className="grid grid-cols-2 gap-3">

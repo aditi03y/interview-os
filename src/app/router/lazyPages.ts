@@ -21,6 +21,12 @@ export const TestResultsPage = lazy(() =>
 export const TestHistoryPage = lazy(() =>
   import('@/features/tests').then((m) => ({ default: m.TestHistoryPage })),
 )
+export const DsaPracticePage = lazy(() =>
+  import('@/features/tests').then((m) => ({ default: m.DsaPracticePage })),
+)
+export const DsaPracticeSessionPage = lazy(() =>
+  import('@/features/tests').then((m) => ({ default: m.DsaPracticeSessionPage })),
+)
 export const ViolationDashboardPage = lazy(() =>
   import('@/features/anti-cheat').then((m) => ({ default: m.ViolationDashboardPage })),
 )
@@ -67,4 +73,7 @@ export const AdminPromptsPage = lazy(() =>
 )
 export const AdminResourcesPage = lazy(() =>
   import('@/features/admin').then((m) => ({ default: m.AdminResourcesPage })),
+)
+export const AdminCurriculumPage = lazy(() =>
+  import('@/features/admin').then((m) => ({ default: m.AdminCurriculumPage })),
 )

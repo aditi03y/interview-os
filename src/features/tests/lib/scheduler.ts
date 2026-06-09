@@ -1,4 +1,6 @@
-import { SDE_ROADMAP_15_DAYS } from '@/features/study-plan/data/roadmap-days'
+import { getCachedStudyPlanDays } from '@/features/study-plan/lib/studyPlanContentCache'
+import { getDayTitleMap } from '@/features/study-plan/services/studyPlanContentService'
+import type { RoadmapDay } from '@/features/study-plan/types'
 import type { ScheduleType, ScheduledTestSlot, TestDefinition } from '../types'
 
 const MS_PER_DAY = 86_400_000
@@ -18,9 +20,13 @@ export function isCumulativeDue(planDay: number): boolean {
   return planDay >= 5 && planDay % 5 === 0
 }
 
+/**
+ * 2-day revision on even plan days (2, 4, 6, …) covers the current pair of study days
+ * ending today — e.g. plan day 4 → study days 3 & 4 (never day 0).
+ */
 export function getRevisionStudyDays(planDay: number): number[] {
   if (planDay < 2) return []
-  return [planDay - 1, planDay - 2].filter((day) => day >= 1)
+  return [planDay - 1, planDay]
 }
 
 /**
@@ -40,13 +46,21 @@ export function resolveCoveredStudyDays(
   return valid(scheduledDays ?? [])
 }
 
-export function getCumulativeStudyDays(planDay: number): number[] {
-  return Array.from({ length: Math.min(planDay, SDE_ROADMAP_15_DAYS.length) }, (_, i) => i + 1)
+export function getCumulativeStudyDays(
+  planDay: number,
+  days: RoadmapDay[] = getCachedStudyPlanDays(),
+): number[] {
+  const maxDay = days.length ? Math.max(...days.map((d) => d.day)) : planDay
+  return Array.from({ length: Math.min(planDay, maxDay) }, (_, i) => i + 1)
 }
 
-export function getStudyDayTitles(days: number[]): string[] {
-  return days
-    .map((day) => SDE_ROADMAP_15_DAYS.find((d) => d.day === day)?.title)
+export function getStudyDayTitles(
+  studyDays: number[],
+  days: RoadmapDay[] = getCachedStudyPlanDays(),
+): string[] {
+  const titleMap = getDayTitleMap(days)
+  return studyDays
+    .map((day) => titleMap.get(day))
     .filter((title): title is string => Boolean(title))
 }
 
@@ -54,6 +68,7 @@ export function buildScheduledSlots(
   definitions: TestDefinition[],
   planDay: number,
   completedScheduleKeys: Set<string>,
+  days: RoadmapDay[] = getCachedStudyPlanDays(),
 ): ScheduledTestSlot[] {
   const slots: ScheduledTestSlot[] = []
 
@@ -66,7 +81,7 @@ export function buildScheduledSlots(
       scheduleType: 'revision_2d',
       planDay,
       coveredStudyDays: covered,
-      dueLabel: `Revision — Days ${covered.join(' & ')} (${getStudyDayTitles(covered).join(', ')})`,
+      dueLabel: `Revision — Days ${covered.join(' & ')} (${getStudyDayTitles(covered, days).join(', ')})`,
       isDue: true,
       completedToday: completedScheduleKeys.has(key),
     })
@@ -74,7 +89,7 @@ export function buildScheduledSlots(
 
   const cumulativeDef = definitions.find((d) => d.scheduleType === 'cumulative_5d')
   if (cumulativeDef && isCumulativeDue(planDay)) {
-    const covered = getCumulativeStudyDays(planDay)
+    const covered = getCumulativeStudyDays(planDay, days)
     const key = `cumulative_5d:${planDay}`
     slots.push({
       definition: cumulativeDef,

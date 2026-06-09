@@ -10,6 +10,7 @@ function StudyPlanContent({ userId }: { userId: string }) {
   const {
     days,
     stats,
+    planMeta,
     isLoading,
     error,
     expandedDay,
@@ -26,9 +27,12 @@ function StudyPlanContent({ userId }: { userId: string }) {
     return (
       <div className="space-y-8">
         <PageHeader
-          title="Study Plan"
-          description="15-Day SDE Intern Roadmap — theory, DSA, assignments, and notes."
-          actions={<Badge variant="primary">15 Days</Badge>}
+          title={planMeta?.title ?? 'Study Plan'}
+          description={
+            planMeta?.description ??
+            'Theory, DSA, assignments, and notes — configured from the admin curriculum console.'
+          }
+          actions={<Badge variant="primary">{stats.totalDays} Days</Badge>}
         />
         <StatsGridSkeleton count={4} className="xl:grid-cols-4" />
         <StatsGridSkeleton count={5} className="grid-cols-1" itemClassName="h-20" />
@@ -85,8 +89,7 @@ export function StudyPlanPage() {
       <div className="space-y-8">
         <PageHeader
           title="Study Plan"
-          description="15-Day SDE Intern Roadmap — theory, DSA, assignments, and notes."
-          actions={<Badge variant="primary">15 Days</Badge>}
+          description="Theory, DSA, assignments, and notes."
         />
         <StatsGridSkeleton count={4} className="xl:grid-cols-4" />
       </div>

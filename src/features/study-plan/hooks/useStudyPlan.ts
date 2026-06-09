@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { syncDsaItemWithTracker } from '@/features/curriculum/lib/syncDsaProgress'
 import { toast } from '@/lib/toast'
-import { SDE_ROADMAP_15_DAYS } from '../data/roadmap'
+import { useStudyPlanContent } from './useStudyPlanContent'
+import type { RoadmapDay } from '../types'
 import {
   calculateDayProgressPercent,
   calculateStudyPlanStats,
@@ -41,8 +42,9 @@ function buildFullPayload(
   dayNumber: number,
   existing: DayProgress | undefined,
   patch: UpsertPayload,
+  roadmapDays: RoadmapDay[],
 ): UpsertPayload {
-  const day = SDE_ROADMAP_15_DAYS.find((d) => d.day === dayNumber)
+  const day = roadmapDays.find((d) => d.day === dayNumber)
   const completed = patch.completedItems ?? existing?.completedItems ?? { ...EMPTY_COMPLETED_ITEMS }
   const progressPercent =
     patch.progressPercent ?? existing?.progressPercent ??
@@ -60,6 +62,14 @@ function buildFullPayload(
 }
 
 export function useStudyPlan(userId: string) {
+  const {
+    days: roadmapDays,
+    meta: planMeta,
+    loading: contentLoading,
+    error: contentError,
+    reload: reloadContent,
+  } = useStudyPlanContent()
+
   const cachedState = readCachedState(userId)
 
   const [progressMap, setProgressMap] = useState(cachedState.progressMap)
@@ -101,7 +111,7 @@ export function useStudyPlan(userId: string) {
     (dayNumber: number, serverRow: DayProgress) => {
       applyProgressMap((prev) => {
         const next = new Map(prev)
-        const day = SDE_ROADMAP_15_DAYS.find((d) => d.day === dayNumber)
+        const day = roadmapDays.find((d) => d.day === dayNumber)
         const local = prev.get(dayNumber)
 
         if (day && local) {
@@ -112,7 +122,7 @@ export function useStudyPlan(userId: string) {
         return next
       })
     },
-    [applyProgressMap],
+    [applyProgressMap, roadmapDays],
   )
 
   const runUpsert = useCallback(
@@ -125,7 +135,7 @@ export function useStudyPlan(userId: string) {
 
       const execute = async () => {
         const existing = progressMapRef.current.get(dayNumber)
-        const fullPayload = buildFullPayload(dayNumber, existing, payload)
+        const fullPayload = buildFullPayload(dayNumber, existing, payload, roadmapDays)
 
         if (options?.notesOnly) {
           setNotesSavingDay(dayNumber)
@@ -172,7 +182,7 @@ export function useStudyPlan(userId: string) {
         await studyPlanSyncQueue.enqueue(dayNumber, execute)
       }
     },
-    [mergeServerRow, userId],
+    [mergeServerRow, roadmapDays, userId],
   )
 
   const flushPendingSync = useCallback(async () => {
@@ -189,6 +199,8 @@ export function useStudyPlan(userId: string) {
   }, [runUpsert])
 
   useEffect(() => {
+    if (contentLoading) return undefined
+
     let cancelled = false
 
     const hydrateFromServer = async () => {
@@ -207,7 +219,7 @@ export function useStudyPlan(userId: string) {
         remoteMap.set(row.dayNumber, row)
       }
 
-      applyProgressMap((prev) => mergeProgressMaps(prev, remoteMap, SDE_ROADMAP_15_DAYS))
+      applyProgressMap((prev) => mergeProgressMaps(prev, remoteMap, roadmapDays))
       setIsLoading(false)
       setIsHydrated(true)
 
@@ -219,7 +231,7 @@ export function useStudyPlan(userId: string) {
     return () => {
       cancelled = true
     }
-  }, [applyProgressMap, flushPendingSync, userId])
+  }, [applyProgressMap, contentLoading, flushPendingSync, roadmapDays, userId])
 
   useEffect(() => {
     const handlePageHide = () => persistLocal(progressMapRef.current)
@@ -244,7 +256,7 @@ export function useStudyPlan(userId: string) {
 
   const days: DayWithProgress[] = useMemo(
     () =>
-      SDE_ROADMAP_15_DAYS.map((day) => ({
+      roadmapDays.map((day) => ({
         ...day,
         progress: progressMap.get(day.day) ?? null,
       })),
@@ -252,13 +264,13 @@ export function useStudyPlan(userId: string) {
   )
 
   const stats: StudyPlanStats = useMemo(
-    () => calculateStudyPlanStats(SDE_ROADMAP_15_DAYS, progressMap),
+    () => calculateStudyPlanStats(roadmapDays, progressMap),
     [progressMap],
   )
 
   const toggleItem = useCallback(
     async (dayNumber: number, section: StudySection, itemId: string) => {
-      const day = SDE_ROADMAP_15_DAYS.find((d) => d.day === dayNumber)
+      const day = roadmapDays.find((d) => d.day === dayNumber)
       if (!day) return
 
       let nextCompleted = EMPTY_COMPLETED_ITEMS
@@ -301,14 +313,14 @@ export function useStudyPlan(userId: string) {
         timeSpentMinutes: snapshot?.timeSpentMinutes,
       })
     },
-    [applyProgressMap, runUpsert, userId],
+    [applyProgressMap, roadmapDays, runUpsert, userId],
   )
 
   const saveNotes = useCallback(
     async (dayNumber: number, notes: string) => {
       applyProgressMap((prev) => {
         const existing = prev.get(dayNumber)
-        const day = SDE_ROADMAP_15_DAYS.find((d) => d.day === dayNumber)
+        const day = roadmapDays.find((d) => d.day === dayNumber)
         if (!day) return prev
 
         const completed = existing?.completedItems ?? { ...EMPTY_COMPLETED_ITEMS }
@@ -330,7 +342,7 @@ export function useStudyPlan(userId: string) {
 
       await runUpsert(dayNumber, { notes }, { notesOnly: true })
     },
-    [applyProgressMap, runUpsert, userId],
+    [applyProgressMap, roadmapDays, runUpsert, userId],
   )
 
   const addStudyTime = useCallback(
@@ -342,7 +354,7 @@ export function useStudyPlan(userId: string) {
 
       applyProgressMap((prev) => {
         snapshot = prev.get(dayNumber)
-        const day = SDE_ROADMAP_15_DAYS.find((d) => d.day === dayNumber)
+        const day = roadmapDays.find((d) => d.day === dayNumber)
         if (!day) return prev
 
         const completed = snapshot?.completedItems ?? { ...EMPTY_COMPLETED_ITEMS }
@@ -369,7 +381,7 @@ export function useStudyPlan(userId: string) {
         completedItems: snapshot?.completedItems,
       })
     },
-    [applyProgressMap, runUpsert, userId],
+    [applyProgressMap, roadmapDays, runUpsert, userId],
   )
 
   const reload = useCallback(async () => {
@@ -386,14 +398,16 @@ export function useStudyPlan(userId: string) {
       remoteMap.set(row.dayNumber, row)
     }
 
-    applyProgressMap((prev) => mergeProgressMaps(prev, remoteMap, SDE_ROADMAP_15_DAYS))
-  }, [applyProgressMap, userId])
+    applyProgressMap((prev) => mergeProgressMaps(prev, remoteMap, roadmapDays))
+    await reloadContent()
+  }, [applyProgressMap, reloadContent, roadmapDays, userId])
 
   return {
     days,
     stats,
-    isLoading: isLoading && !isHydrated,
-    error,
+    planMeta,
+    isLoading: (isLoading && !isHydrated) || contentLoading,
+    error: error ?? contentError,
     expandedDay,
     setExpandedDay,
     toggleItem,
