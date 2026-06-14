@@ -3,10 +3,13 @@ import { Play } from 'lucide-react'
 import { Badge, Button, Input, Textarea } from '@/components/ui'
 import {
   CODING_LANGUAGES,
+  DEFAULT_CODING_LANGUAGE,
+  DEFAULT_CODING_LANGUAGES,
   getStarterCode,
   getSupportedLanguages,
   getVisibleTestCases,
   runCodingTestSuite,
+  supportsBrowserTestExecution,
   type CodingLanguageId,
 } from '../lib/codingRunner'
 import type { CodingMetadata, CodingTestCaseResult, QuestionAnswer } from '../types'
@@ -31,8 +34,10 @@ export function QuestionCoding({
   showHiddenResults = false,
 }: QuestionCodingProps) {
   const meta = isCodingMetadata(metadata ?? {}) ? (metadata as CodingMetadata) : null
-  const languages = meta ? getSupportedLanguages(meta) : (['javascript'] as CodingLanguageId[])
-  const language = (answer.language as CodingLanguageId) ?? languages[0] ?? 'javascript'
+  const languages = meta ? getSupportedLanguages(meta) : DEFAULT_CODING_LANGUAGES
+  const language =
+    (answer.language as CodingLanguageId) ?? languages[0] ?? DEFAULT_CODING_LANGUAGE
+  const canRunSamples = supportsBrowserTestExecution(language)
 
   const [runResults, setRunResults] = useState<CodingTestCaseResult[] | null>(null)
   const [running, setRunning] = useState(false)
@@ -79,21 +84,21 @@ export function QuestionCoding({
             ))}
           </select>
         </label>
-        {!showHiddenResults && visibleCases.length > 0 ? (
+        {!showHiddenResults && visibleCases.length > 0 && canRunSamples ? (
           <Button
             type="button"
             size="sm"
             variant="outline"
-            disabled={disabled || running || language !== 'javascript'}
+            disabled={disabled || running}
             onClick={handleRunVisible}
           >
             <Play className="h-3.5 w-3.5" />
             Run sample tests ({visibleCases.length})
           </Button>
         ) : null}
-        {language !== 'javascript' ? (
-          <Badge variant="warning" className="text-xs">
-            Grading runs in JavaScript only during tests
+        {!canRunSamples ? (
+          <Badge variant="outline" className="text-xs">
+            Submit to grade complexity; test cases are stored for review
           </Badge>
         ) : null}
       </div>

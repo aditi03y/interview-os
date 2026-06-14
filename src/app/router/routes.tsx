@@ -77,7 +77,6 @@ export const appRoutes: RouteObject[] = [
             children: [
               { index: true, element: <AdminDashboardPage /> },
               { path: 'tests', element: <AdminTestsPage /> },
-              { path: 'tests/new', element: <AdminTestDetailPage /> },
               { path: 'tests/:testId', element: <AdminTestDetailPage /> },
               { path: 'prompts', element: <AdminPromptsPage /> },
               { path: 'resources', element: <AdminResourcesPage /> },

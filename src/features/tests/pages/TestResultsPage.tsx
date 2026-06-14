@@ -101,10 +101,15 @@ export function TestResultsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div className="flex flex-wrap items-center gap-4">
-        <Link to={ROUTES.tests}>
+        <Link to={ROUTES.testHistory}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4" />
-            Back to Tests
+            Test History
+          </Button>
+        </Link>
+        <Link to={ROUTES.tests}>
+          <Button variant="ghost" size="sm">
+            All Tests
           </Button>
         </Link>
         {canRetake ? (

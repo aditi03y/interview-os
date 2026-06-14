@@ -185,7 +185,7 @@ export function TestsPage() {
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Recent Attempts</h2>
-        <AttemptHistoryTable attempts={recentAttempts} />
+        <AttemptHistoryTable attempts={recentAttempts} showActions />
       </section>
     </div>
   )

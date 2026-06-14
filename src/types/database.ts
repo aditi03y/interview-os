@@ -1154,6 +1154,10 @@ export interface Database {
         Args: { p_plan_id: string; p_day_number: number }
         Returns: undefined
       }
+      renumber_study_plan_days: {
+        Args: { p_plan_id: string }
+        Returns: number
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

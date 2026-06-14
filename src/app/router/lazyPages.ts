@@ -66,7 +66,7 @@ export const AdminTestsPage = lazy(() =>
   import('@/features/admin').then((m) => ({ default: m.AdminTestsPage })),
 )
 export const AdminTestDetailPage = lazy(() =>
-  import('@/features/admin').then((m) => ({ default: m.AdminTestDetailPage })),
+  import('@/features/admin').then((m) => ({ default: m.AdminTestDetailRoute })),
 )
 export const AdminPromptsPage = lazy(() =>
   import('@/features/admin').then((m) => ({ default: m.AdminPromptsPage })),

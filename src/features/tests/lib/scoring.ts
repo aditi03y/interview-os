@@ -7,7 +7,7 @@ import type {
 } from '../types'
 import { getQuestionSectionId, isCodingMetadata } from '../types'
 import { gradeComplexityAnswer, COMPLEXITY_MARK_EACH } from './complexityGrading'
-import { runCodingTestSuite } from './codingRunner'
+import { DEFAULT_CODING_LANGUAGE, runCodingTestSuite } from './codingRunner'
 
 export interface GradeResult {
   answers: AttemptAnswers
@@ -108,7 +108,7 @@ function gradeQuestion(question: TestQuestion, answer: QuestionAnswer): Question
 
     const run = runCodingTestSuite(value, meta, {
       includeHidden: true,
-      language: answer.language ?? 'javascript',
+      language: answer.language ?? DEFAULT_CODING_LANGUAGE,
     })
 
     const caseRatio = run.total > 0 ? run.passed / run.total : 0

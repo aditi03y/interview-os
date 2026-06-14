@@ -1,6 +1,7 @@
 export { AdminDashboardPage } from './pages/AdminDashboardPage'
 export { AdminTestsPage } from './pages/AdminTestsPage'
 export { AdminTestDetailPage } from './pages/AdminTestDetailPage'
+export { AdminTestDetailRoute } from './pages/AdminTestDetailRoute'
 export { AdminPromptsPage } from './pages/AdminPromptsPage'
 export { AdminResourcesPage } from './pages/AdminResourcesPage'
 export { AdminCurriculumPage } from './pages/AdminCurriculumPage'

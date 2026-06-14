@@ -10,7 +10,7 @@ import {
   type TestGenerationSpec,
 } from '../lib/testGenerationPrompt'
 import { activeSections, batchSectionCounts } from '../lib/testSections'
-import { buildTestGenerationContext } from './adminContentService'
+import { buildStudyDaysCurriculumContext, buildTestGenerationContext } from './adminContentService'
 import type { TestDefinitionInput } from './adminTestService'
 
 const AI_BATCH_SIZE = 15
@@ -66,7 +66,21 @@ export async function generateTestQuestionsWithAi(
     }
   }
 
-  const contentContext = await buildTestGenerationContext()
+  if (!spec.studyDays.length) {
+    return {
+      data: null,
+      error: {
+        message: 'Select at least one study day to include in question generation.',
+        code: 'NO_STUDY_DAYS',
+      },
+    }
+  }
+
+  const [contentContext, curriculumContext] = await Promise.all([
+    buildTestGenerationContext(),
+    buildStudyDaysCurriculumContext(spec.studyDays),
+  ])
+  const fullContext = [contentContext, curriculumContext].filter(Boolean).join('\n\n')
   const allQuestions: GeneratedTestQuestion[] = []
 
   try {
@@ -78,7 +92,7 @@ export async function generateTestQuestionsWithAi(
           spec,
           section,
           batchSize,
-          contentContext,
+          fullContext,
           allQuestions.map((q) => q.title),
         )
         allQuestions.push(...batch)

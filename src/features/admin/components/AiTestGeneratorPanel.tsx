@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import {
   Badge,
@@ -24,6 +24,7 @@ import {
   createQuestionsBulkAdmin,
   type TestDefinitionInput,
 } from '../services/adminTestService'
+import { StudyDayPicker } from './StudyDayPicker'
 
 interface AiTestGeneratorPanelProps {
   testId: string
@@ -39,8 +40,12 @@ export function AiTestGeneratorPanel({
   onQuestionsAdded,
 }: AiTestGeneratorPanelProps) {
   const [instruction, setInstruction] = useState('')
+  const [studyDays, setStudyDays] = useState<number[]>(definition.coveredStudyDays ?? [])
   const sections = definition.sections ?? []
-  const studyDays = definition.coveredStudyDays ?? []
+
+  useEffect(() => {
+    setStudyDays(definition.coveredStudyDays ?? [])
+  }, [definition.coveredStudyDays])
 
   const enabledSections = activeSections(sections)
   const totalQuestions = sectionTotalQuestions(sections)
@@ -70,6 +75,10 @@ export function AiTestGeneratorPanel({
   const handleGenerate = async () => {
     if (!enabledSections.length) {
       toast.error('Set a question count greater than 0 for at least one section.')
+      return
+    }
+    if (!studyDays.length) {
+      toast.error('Select at least one study day for question generation.')
       return
     }
 
@@ -144,11 +153,18 @@ export function AiTestGeneratorPanel({
           AI question assistant
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Uses the section config and study days from test settings above. Large sets are generated
-          in batches automatically — no question cap.
+          Pick study days below, then generate questions from their curriculum content.
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
+        <StudyDayPicker
+          label="Study days for generation"
+          value={studyDays}
+          onChange={setStudyDays}
+          purpose="generation"
+          required
+        />
+
         {enabledSections.length > 0 ? (
           <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
             <p className="font-medium">Generation plan</p>

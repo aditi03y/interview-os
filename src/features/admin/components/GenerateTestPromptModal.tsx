@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import { Badge, Button, Modal, Textarea } from '@/components/ui'
 import { toast } from '@/lib/toast'
@@ -10,6 +10,7 @@ import {
   sectionTotalMaxScore,
   sectionTotalQuestions,
 } from '../lib/testSections'
+import { StudyDayPicker } from './StudyDayPicker'
 
 type SaveMode = 'replace' | 'append'
 
@@ -18,8 +19,12 @@ interface GenerateTestPromptModalProps {
   onClose: () => void
   definition: TestDefinitionInput
   existingQuestionCount: number
-  onGenerate: (instruction: string) => Promise<GeneratedTestQuestion[] | null>
-  onCommit: (questions: GeneratedTestQuestion[], mode: SaveMode) => Promise<void>
+  onGenerate: (instruction: string, studyDays: number[]) => Promise<GeneratedTestQuestion[] | null>
+  onCommit: (
+    questions: GeneratedTestQuestion[],
+    mode: SaveMode,
+    studyDays: number[],
+  ) => Promise<void>
   isCommitting: boolean
   commitStep: 'idle' | 'publishing'
 }
@@ -35,6 +40,7 @@ export function GenerateTestPromptModal({
   commitStep,
 }: GenerateTestPromptModalProps) {
   const [instruction, setInstruction] = useState('')
+  const [studyDays, setStudyDays] = useState<number[]>(definition.coveredStudyDays ?? [])
   const [phase, setPhase] = useState<'prompt' | 'preview'>('prompt')
   const [generating, setGenerating] = useState(false)
   const [preview, setPreview] = useState<GeneratedTestQuestion[]>([])
@@ -42,8 +48,15 @@ export function GenerateTestPromptModal({
     existingQuestionCount > 0 ? 'replace' : 'append',
   )
 
+  useEffect(() => {
+    if (!open) return
+    setStudyDays(definition.coveredStudyDays ?? [])
+    setPhase('prompt')
+    setPreview([])
+    setInstruction('')
+  }, [open, definition.coveredStudyDays])
+
   const sections = definition.sections ?? []
-  const studyDays = definition.coveredStudyDays ?? []
   const enabledSections = activeSections(sections)
   const totalMaxScore = sectionTotalMaxScore(sections)
   const totalQuestions = sectionTotalQuestions(sections)
@@ -64,9 +77,13 @@ export function GenerateTestPromptModal({
       toast.error('Set a question count greater than 0 for at least one section.')
       return
     }
+    if (!studyDays.length) {
+      toast.error('Select at least one study day for question generation.')
+      return
+    }
 
     setGenerating(true)
-    const questions = await onGenerate(instruction)
+    const questions = await onGenerate(instruction, studyDays)
     setGenerating(false)
 
     if (!questions?.length) return
@@ -78,7 +95,7 @@ export function GenerateTestPromptModal({
 
   const handleCommit = async () => {
     if (!preview.length) return
-    await onCommit(preview, saveMode)
+    await onCommit(preview, saveMode, studyDays)
   }
 
   const commitLabel =
@@ -95,7 +112,7 @@ export function GenerateTestPromptModal({
       }
       description={
         phase === 'prompt'
-          ? 'Your test structure was saved. Generate AI questions matching each section, then publish.'
+          ? 'Pick study days, then generate AI questions matching each section.'
           : 'Choose whether to replace or append, then publish the test for students.'
       }
       className="max-w-xl"
@@ -118,11 +135,6 @@ export function GenerateTestPromptModal({
               No sections with questions configured. Close and set section counts first.
             </p>
           )}
-          {studyDays.length > 0 ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Study days: {studyDays.join(', ')}
-            </p>
-          ) : null}
           <p className="mt-2 text-xs text-muted-foreground">
             Total: {totalQuestions} questions · {sectionTotalDuration(sections)} minutes ·{' '}
             {totalMaxScore} max score
@@ -131,6 +143,14 @@ export function GenerateTestPromptModal({
 
         {phase === 'prompt' ? (
           <>
+            <StudyDayPicker
+              label="Study days for this test"
+              value={studyDays}
+              onChange={setStudyDays}
+              purpose="generation"
+              required
+            />
+
             <Textarea
               label="Additional AI instructions (optional)"
               placeholder={exampleHint}
@@ -152,6 +172,12 @@ export function GenerateTestPromptModal({
           </>
         ) : (
           <>
+            {studyDays.length > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Generated from study days: {studyDays.join(', ')}
+              </p>
+            ) : null}
+
             <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-border p-2">
               {preview.map((q, index) => (
                 <div key={`${q.sectionId}-${q.title}-${index}`} className="rounded-md p-2 text-sm">
@@ -159,6 +185,9 @@ export function GenerateTestPromptModal({
                     <p className="font-medium">{q.title}</p>
                     <Badge variant="outline">{q.questionType}</Badge>
                     <span className="text-xs text-muted-foreground">{q.points} pt</span>
+                    {q.studyDay ? (
+                      <span className="text-xs text-muted-foreground">Day {q.studyDay}</span>
+                    ) : null}
                   </div>
                   <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{q.body}</p>
                 </div>

@@ -1,4 +1,6 @@
-import { Badge } from '@/components/ui'
+import { Link } from 'react-router-dom'
+import { ROUTES } from '@/app/router/paths'
+import { Badge, Button } from '@/components/ui'
 import type { TestAttempt } from '../types'
 
 function formatRelativeTime(iso: string): string {
@@ -14,6 +16,7 @@ function formatRelativeTime(iso: string): string {
 
 interface AttemptHistoryTableProps {
   attempts: TestAttempt[]
+  showActions?: boolean
 }
 
 function statusVariant(status: TestAttempt['status']) {
@@ -33,10 +36,16 @@ function formatStatus(status: TestAttempt['status']) {
   return status.replace('_', ' ')
 }
 
-export function AttemptHistoryTable({ attempts }: AttemptHistoryTableProps) {
+function isReviewable(status: TestAttempt['status']) {
+  return status === 'completed' || status === 'auto_submitted'
+}
+
+export function AttemptHistoryTable({ attempts, showActions = false }: AttemptHistoryTableProps) {
   if (!attempts.length) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">No attempts yet. Start your first test!</p>
+      <p className="py-8 text-center text-sm text-muted-foreground">
+        No attempts yet. Start your first test!
+      </p>
     )
   }
 
@@ -50,6 +59,7 @@ export function AttemptHistoryTable({ attempts }: AttemptHistoryTableProps) {
             <th className="px-4 py-3 font-medium">Time</th>
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">When</th>
+            {showActions ? <th className="px-4 py-3 font-medium" /> : null}
           </tr>
         </thead>
         <tbody>
@@ -61,6 +71,7 @@ export function AttemptHistoryTable({ attempts }: AttemptHistoryTableProps) {
             const mins = attempt.timeSpentSeconds
               ? Math.round(attempt.timeSpentSeconds / 60)
               : null
+            const reviewable = isReviewable(attempt.status)
 
             return (
               <tr key={attempt.id} className="border-b border-border last:border-0">
@@ -84,8 +95,23 @@ export function AttemptHistoryTable({ attempts }: AttemptHistoryTableProps) {
                   <Badge variant={statusVariant(attempt.status)}>{formatStatus(attempt.status)}</Badge>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {formatRelativeTime(attempt.startedAt)}
+                  {formatRelativeTime(attempt.completedAt ?? attempt.startedAt)}
                 </td>
+                {showActions ? (
+                  <td className="px-4 py-3 text-right">
+                    {reviewable ? (
+                      <Link to={ROUTES.testResults(attempt.id)}>
+                        <Button size="sm" variant="outline">
+                          View answers
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Link to={ROUTES.testAttempt(attempt.id)}>
+                        <Button size="sm">Resume</Button>
+                      </Link>
+                    )}
+                  </td>
+                ) : null}
               </tr>
             )
           })}

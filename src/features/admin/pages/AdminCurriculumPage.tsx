@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Plus, Save, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { Pencil, Plus, RefreshCw, Save, Trash2 } from 'lucide-react'
 import {
   Badge,
   Button,
@@ -23,6 +23,8 @@ import {
   deleteStudyItem,
   deleteStudyPrompt,
   fetchCurriculumAdmin,
+  renameStudyDayTitle,
+  renumberStudyPlanDays,
   updatePlanMeta,
   upsertItemResource,
   upsertStudyDay,
@@ -47,6 +49,9 @@ export function AdminCurriculumPage() {
   const [planTitle, setPlanTitle] = useState('')
   const [planDescription, setPlanDescription] = useState('')
   const [dayDraft, setDayDraft] = useState<RoadmapDay | null>(null)
+  const [renumbering, setRenumbering] = useState(false)
+  const [renamingDay, setRenamingDay] = useState<number | null>(null)
+  const [renameDraft, setRenameDraft] = useState('')
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -80,6 +85,50 @@ export function AdminCurriculumPage() {
     if (activeDay) setDayDraft(structuredClone(activeDay))
     else setDayDraft(null)
   }, [activeDay])
+
+  const handleRenumberDays = async () => {
+    setRenumbering(true)
+    const result = await renumberStudyPlanDays()
+    setRenumbering(false)
+    if (result.error) {
+      toast.error(result.error.message)
+      return
+    }
+    invalidateStudyPlanContentCache()
+    if (result.data && result.data > 0) {
+      toast.success(`Renumbered ${result.data} day${result.data === 1 ? '' : 's'} to close gaps (now 1…N).`)
+    } else {
+      toast.success('Days are already numbered sequentially — no changes needed.')
+    }
+    setSelectedDay(null)
+    setRenamingDay(null)
+    void reload()
+  }
+
+  const startRenameDay = (day: RoadmapDay, event: MouseEvent) => {
+    event.stopPropagation()
+    setRenamingDay(day.day)
+    setRenameDraft(day.title)
+  }
+
+  const commitRenameDay = async (dayNumber: number) => {
+    const title = renameDraft.trim()
+    if (!title) {
+      toast.error('Day title cannot be empty.')
+      return
+    }
+    setSaving(true)
+    const result = await renameStudyDayTitle(dayNumber, title)
+    setSaving(false)
+    if (result.error) {
+      toast.error(result.error.message)
+      return
+    }
+    invalidateStudyPlanContentCache()
+    setRenamingDay(null)
+    toast.success(`Day ${dayNumber} renamed.`)
+    void reload()
+  }
 
   const savePlanMeta = async () => {
     setSaving(true)
@@ -328,6 +377,18 @@ export function AdminCurriculumPage() {
       <PageHeader
         title="Study Plan Curriculum"
         description="Configure study days, theory topics, DSA problems, assignments, resources, and AI prompts."
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleRenumberDays()}
+            isLoading={renumbering}
+            disabled={saving}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh & renumber days
+          </Button>
+        }
       />
 
       {error ? <ErrorAlert message={error} onRetry={() => void reload()} /> : null}
@@ -364,19 +425,63 @@ export function AdminCurriculumPage() {
           <CardContent className="space-y-1">
             {plan?.days.length ? (
               plan.days.map((day) => (
-                <button
+                <div
                   key={day.day}
-                  type="button"
-                  onClick={() => setSelectedDay(day.day)}
-                  className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                  className={`rounded-lg border transition-colors ${
                     selectedDay === day.day
                       ? 'border-primary bg-primary/10'
                       : 'border-border hover:bg-muted/50'
                   }`}
                 >
-                  <span className="font-medium">Day {day.day}</span>
-                  <span className="truncate text-xs text-muted-foreground">{day.title}</span>
-                </button>
+                  {renamingDay === day.day ? (
+                    <div className="flex items-center gap-1 p-2">
+                      <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                        Day {day.day}
+                      </span>
+                      <input
+                        className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-sm"
+                        value={renameDraft}
+                        autoFocus
+                        onChange={(e) => setRenameDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void commitRenameDay(day.day)
+                          if (e.key === 'Escape') setRenamingDay(null)
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => void commitRenameDay(day.day)}
+                        disabled={saving}
+                      >
+                        <Save className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDay(day.day)}
+                      className="flex w-full items-center justify-between px-3 py-2 text-left text-sm"
+                    >
+                      <span className="font-medium">Day {day.day}</span>
+                      <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+                        <span className="truncate">{day.title}</span>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="shrink-0 rounded p-0.5 hover:bg-muted"
+                          aria-label={`Rename day ${day.day}`}
+                          onClick={(e) => startRenameDay(day, e)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') startRenameDay(day, e as unknown as MouseEvent)
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </span>
+                      </span>
+                    </button>
+                  )}
+                </div>
               ))
             ) : (
               <p className="text-sm text-muted-foreground">

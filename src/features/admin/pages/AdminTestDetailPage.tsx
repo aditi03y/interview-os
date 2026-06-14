@@ -45,19 +45,21 @@ const SCHEDULE_TYPES = ['revision_2d', 'cumulative_5d', 'manual'] as const
 const DIFFICULTIES = ['Easy', 'Medium', 'Hard'] as const
 const QUESTION_TYPES = ['mcq', 'subjective', 'coding'] as const
 
-const emptyDefinition: TestDefinitionInput = {
-  title: '',
-  description: '',
-  testType: 'mixed',
-  scheduleType: 'manual',
-  durationMinutes: 30,
-  difficulty: 'Medium',
-  topics: [],
-  maxScore: sectionTotalMaxScore(cloneSections(DEFAULT_TEST_SECTIONS)),
-  isActive: true,
-  coveredStudyDays: [],
-  sections: cloneSections(DEFAULT_TEST_SECTIONS),
-  maxAttempts: null,
+function createEmptyDefinition(): TestDefinitionInput {
+  return {
+    title: '',
+    description: '',
+    testType: 'mixed',
+    scheduleType: 'manual',
+    durationMinutes: 30,
+    difficulty: 'Medium',
+    topics: [],
+    maxScore: sectionTotalMaxScore(cloneSections(DEFAULT_TEST_SECTIONS)),
+    isActive: true,
+    coveredStudyDays: [],
+    sections: cloneSections(DEFAULT_TEST_SECTIONS),
+    maxAttempts: null,
+  }
 }
 
 function emptyQuestion(type: QuestionType = 'mcq'): TestQuestionInput {
@@ -68,8 +70,14 @@ function emptyQuestion(type: QuestionType = 'mcq'): TestQuestionInput {
     options: type === 'mcq' ? [{ id: 'a', label: 'Option A' }, { id: 'b', label: 'Option B' }] : null,
     correctAnswer: type === 'mcq' ? 'a' : null,
     rubric: type === 'subjective' ? 'Full credit criteria...' : null,
-    starterCode: type === 'coding' ? 'function solve(input) {\n  // your code\n}' : null,
-    metadata: type === 'coding' ? { functionName: 'solve', testCases: [] } : {},
+    starterCode:
+      type === 'coding'
+        ? '#include <bits/stdc++.h>\nusing namespace std;\n\n// implement solve\n'
+        : null,
+    metadata:
+      type === 'coding'
+        ? { functionName: 'solve', testCases: [], languages: ['cpp', 'c', 'python', 'go'] }
+        : {},
     points: 1,
     orderIndex: 0,
     studyDay: null,
@@ -79,39 +87,42 @@ function emptyQuestion(type: QuestionType = 'mcq'): TestQuestionInput {
 
 export function AdminTestDetailPage() {
   const { testId } = useParams<{ testId: string }>()
-  const navigate = useNavigate()
   const location = useLocation()
-  const initialGeneratePrompt = location.state as {
-    openGeneratePrompt?: boolean
-    savedDefinition?: TestDefinitionInput
-  } | null
-
-  const [definition, setDefinition] = useState<TestDefinitionInput>(emptyDefinition)
+  const navigate = useNavigate()
+  const [definition, setDefinition] = useState<TestDefinitionInput>(createEmptyDefinition)
   const [questions, setQuestions] = useState<TestQuestion[]>([])
-  const [loading, setLoading] = useState(() => testId !== 'new')
+  const [loading, setLoading] = useState(() => Boolean(testId && testId !== 'new'))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [questionModalOpen, setQuestionModalOpen] = useState(false)
   const [editingQuestion, setEditingQuestion] = useState<TestQuestion | null>(null)
   const [questionForm, setQuestionForm] = useState<TestQuestionInput>(emptyQuestion())
-  const [generateModalOpen, setGenerateModalOpen] = useState(() =>
-    Boolean(initialGeneratePrompt?.openGeneratePrompt),
-  )
+  const [generateModalOpen, setGenerateModalOpen] = useState(false)
   const [publishProcessing, setPublishProcessing] = useState(false)
   const [publishStep, setPublishStep] = useState<'idle' | 'publishing'>('idle')
-  const [savedDefinition, setSavedDefinition] = useState<TestDefinitionInput | null>(
-    () => initialGeneratePrompt?.savedDefinition ?? null,
-  )
+  const [savedDefinition, setSavedDefinition] = useState<TestDefinitionInput | null>(null)
 
-  const isNew = testId === 'new'
+  const isNew = !testId || testId === 'new'
 
   useEffect(() => {
-    if (!initialGeneratePrompt?.openGeneratePrompt) return
-    navigate(location.pathname, { replace: true, state: null })
-  }, [initialGeneratePrompt?.openGeneratePrompt, location.pathname, navigate])
+    if (!testId) return
 
-  useEffect(() => {
-    if (!testId || isNew) return
+    const navState = location.state as {
+      openGeneratePrompt?: boolean
+      savedDefinition?: TestDefinitionInput
+    } | null
+
+    if (isNew) {
+      setDefinition(createEmptyDefinition())
+      setQuestions([])
+      setError(null)
+      setLoading(false)
+      setGenerateModalOpen(false)
+      setSavedDefinition(null)
+      setQuestionModalOpen(false)
+      setEditingQuestion(null)
+      return
+    }
 
     let cancelled = false
 
@@ -125,8 +136,8 @@ export function AdminTestDetailPage() {
       ])
       if (cancelled) return
 
-      if (defResult.error) {
-        setError(defResult.error.message)
+      if (defResult.error || !defResult.data) {
+        setError(defResult.error?.message ?? 'Test not found')
         setLoading(false)
         return
       }
@@ -149,13 +160,19 @@ export function AdminTestDetailPage() {
       })
       setQuestions(qResult.data ?? [])
       setLoading(false)
+
+      if (navState?.openGeneratePrompt && navState.savedDefinition) {
+        setSavedDefinition(navState.savedDefinition)
+        setGenerateModalOpen(true)
+        navigate(location.pathname, { replace: true, state: null })
+      }
     }
 
     void run()
     return () => {
       cancelled = true
     }
-  }, [isNew, testId])
+  }, [testId, isNew, location.pathname, location.state, navigate])
 
   const openGeneratePrompt = (saved: TestDefinitionInput) => {
     setSavedDefinition(saved)
@@ -231,7 +248,7 @@ export function AdminTestDetailPage() {
     }
   }
 
-  const handleGeneratePreview = async (instruction: string) => {
+  const handleGeneratePreview = async (instruction: string, studyDays: number[]) => {
     const def = savedDefinition ?? definition
     const sections = def.sections ?? []
 
@@ -239,7 +256,7 @@ export function AdminTestDetailPage() {
       instruction,
       sections,
       topics: def.topics ?? [],
-      studyDays: def.coveredStudyDays ?? [],
+      studyDays,
     })
 
     if (result.error) {
@@ -253,15 +270,18 @@ export function AdminTestDetailPage() {
   const handleCommitGenerated = async (
     generated: GeneratedTestQuestion[],
     mode: 'replace' | 'append',
+    studyDays: number[],
   ) => {
     if (!testId || isNew) {
       toast.error('Save the test structure first.')
       return
     }
 
-    const def = savedDefinition ?? definition
+    const def = { ...(savedDefinition ?? definition), coveredStudyDays: studyDays }
     setPublishProcessing(true)
     setPublishStep('idle')
+
+    await updateTestDefinitionAdmin(testId, def)
 
     const result = await commitGeneratedQuestionsAdmin(testId, def, generated, {
       mode,
@@ -278,6 +298,7 @@ export function AdminTestDetailPage() {
 
     setDefinition((d) => ({
       ...d,
+      coveredStudyDays: studyDays,
       isActive: true,
       maxScore: maxScoreFromSections(def.sections),
     }))
@@ -484,6 +505,7 @@ export function AdminTestDetailPage() {
             <StudyDayPicker
               value={definition.coveredStudyDays ?? []}
               onChange={(days) => setDefinition((d) => ({ ...d, coveredStudyDays: days }))}
+              purpose={definition.scheduleType === 'manual' ? 'generation' : 'student-filter'}
             />
             <p className="mt-1.5 text-xs text-muted-foreground">
               {definition.scheduleType === 'manual'
@@ -692,7 +714,8 @@ export function AdminTestDetailPage() {
               />
               <p className="text-xs text-muted-foreground">
                 Include functionName, testCases (set hidden: true for grading-only cases),
-                expectedTimeComplexity, expectedSpaceComplexity, and optional languages array.
+                expectedTimeComplexity, expectedSpaceComplexity, and languages
+                (default: ["cpp", "c", "python", "go"]).
               </p>
             </>
           ) : null}

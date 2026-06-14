@@ -179,3 +179,45 @@ export async function buildTestGenerationContext(): Promise<string> {
 
   return result.data.map((p) => `## ${p.title}\n${p.promptText}`).join('\n\n')
 }
+
+export async function buildStudyDaysCurriculumContext(studyDays: number[]): Promise<string> {
+  if (!studyDays.length) return ''
+
+  const { fetchActiveStudyPlan } = await import(
+    '@/features/study-plan/services/studyPlanContentService'
+  )
+  const result = await fetchActiveStudyPlan('default')
+  if (!result.data) return ''
+
+  const titleMap = new Map(result.data.days.map((day) => [day.day, day.title]))
+  const blocks: string[] = []
+
+  for (const dayNumber of studyDays) {
+    const day = result.data.days.find((d) => d.day === dayNumber)
+    if (!day) continue
+
+    const lines = [`## Day ${day.day}: ${day.title}`]
+    if (day.subtitle.trim()) lines.push(day.subtitle.trim())
+
+    const appendSection = (label: string, items: { title: string; description?: string }[]) => {
+      if (!items.length) return
+      lines.push(`### ${label}`)
+      for (const item of items) {
+        lines.push(`- ${item.title}${item.description ? `: ${item.description}` : ''}`)
+      }
+    }
+
+    appendSection('Theory', day.theory)
+    appendSection('DSA', day.dsa)
+    appendSection('Assignments', day.assignment)
+
+    blocks.push(lines.join('\n'))
+  }
+
+  if (!blocks.length) {
+    const labels = studyDays.map((d) => `Day ${d}${titleMap.get(d) ? `: ${titleMap.get(d)}` : ''}`)
+    return `## Selected study days\n${labels.join('\n')}\n(No curriculum items found for these days yet.)`
+  }
+
+  return `## Curriculum for selected study days\n\n${blocks.join('\n\n')}`
+}

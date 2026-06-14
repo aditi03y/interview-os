@@ -14,6 +14,7 @@ import {
   Spinner,
 } from '@/components/ui'
 import { toast } from '@/lib/toast'
+import { DEFAULT_CODING_LANGUAGE } from '../lib/codingRunner'
 import { QuestionCoding } from '../components/QuestionCoding'
 import { TestCaseResultsPanel } from '../components/TestCaseResultsPanel'
 import type { QuestionAnswer, TestQuestion } from '../types'
@@ -29,7 +30,7 @@ export function DsaPracticeSessionPage() {
   const { user } = useAuth()
 
   const [question, setQuestion] = useState<TestQuestion | null>(null)
-  const [answer, setAnswer] = useState<QuestionAnswer>({ value: '', language: 'javascript' })
+  const [answer, setAnswer] = useState<QuestionAnswer>({ value: '', language: DEFAULT_CODING_LANGUAGE })
   const [history, setHistory] = useState<PracticeAttemptRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -63,7 +64,7 @@ export function DsaPracticeSessionPage() {
       userId: user.id,
       question,
       code: answer.value,
-      language: answer.language ?? 'javascript',
+      language: answer.language ?? DEFAULT_CODING_LANGUAGE,
       timeComplexity: answer.timeComplexity,
       spaceComplexity: answer.spaceComplexity,
     })

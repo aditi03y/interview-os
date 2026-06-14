@@ -1,10 +1,10 @@
-import { Badge, EmptyState, ErrorAlert, PageHeader } from '@/components/ui'
+import { Badge, Button, EmptyState, ErrorAlert, PageHeader } from '@/components/ui'
 import { StatsGridSkeleton } from '@/components/ui/PageSkeletons'
 import { useAuth } from '@/hooks/auth'
 import { DayCard } from '../components/DayCard'
 import { StudyPlanOverview } from '../components/StudyPlanOverview'
 import { useStudyPlan } from '../hooks/useStudyPlan'
-import { Map } from 'lucide-react'
+import { Map, RefreshCw } from 'lucide-react'
 
 function StudyPlanContent({ userId }: { userId: string }) {
   const {
@@ -43,9 +43,22 @@ function StudyPlanContent({ userId }: { userId: string }) {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Study Plan"
-        description="15-Day SDE Intern Roadmap — theory, DSA, assignments, and notes."
-        actions={<Badge variant="primary">15 Days</Badge>}
+        title={planMeta?.title ?? 'Study Plan'}
+        description={
+          planMeta?.description ??
+          'Theory, DSA, assignments, and notes — configured from the admin curriculum console.'
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => void reload()} disabled={isLoading}>
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+            <Badge variant="primary">
+              {stats.totalDays} Day{stats.totalDays === 1 ? '' : 's'}
+            </Badge>
+          </div>
+        }
       />
 
       {error ? <ErrorAlert message={error} onRetry={() => void reload()} /> : null}

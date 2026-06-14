@@ -136,6 +136,50 @@ export async function deleteStudyDay(dayNumber: number): Promise<ApiResult<void>
   return { data: undefined, error: null }
 }
 
+export async function renumberStudyPlanDays(): Promise<ApiResult<number>> {
+  const planResult = await getDefaultPlanId()
+  if (planResult.error || !planResult.data) {
+    return { data: null, error: planResult.error ?? { message: 'Plan not found.' } }
+  }
+
+  const { data, error } = await supabase.rpc('renumber_study_plan_days', {
+    p_plan_id: planResult.data,
+  })
+
+  if (error) return { data: null, error: mapPostgrestError(error) }
+  return { data: data ?? 0, error: null }
+}
+
+export async function renameStudyDayTitle(
+  dayNumber: number,
+  title: string,
+): Promise<ApiResult<void>> {
+  const planResult = await getDefaultPlanId()
+  if (planResult.error || !planResult.data) {
+    return { data: null, error: planResult.error ?? { message: 'Plan not found.' } }
+  }
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('study_plan_days')
+    .select('subtitle, estimated_minutes, sort_order')
+    .eq('plan_id', planResult.data)
+    .eq('day_number', dayNumber)
+    .maybeSingle()
+
+  if (fetchError) return { data: null, error: mapPostgrestError(fetchError) }
+  if (!existing) {
+    return { data: null, error: { message: `Day ${dayNumber} not found.`, code: 'NOT_FOUND' } }
+  }
+
+  return upsertStudyDay({
+    dayNumber,
+    title: title.trim(),
+    subtitle: existing.subtitle,
+    estimatedMinutes: existing.estimated_minutes,
+    sortOrder: existing.sort_order,
+  })
+}
+
 export async function upsertStudyItem(
   dayNumber: number,
   input: ItemInput,
