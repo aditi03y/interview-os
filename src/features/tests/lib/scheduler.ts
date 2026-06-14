@@ -46,6 +46,24 @@ export function resolveCoveredStudyDays(
   return valid(scheduledDays ?? [])
 }
 
+/**
+ * Study-day filter when loading questions for a new attempt.
+ * Manual tests include all questions unless the caller passes explicit days (e.g. admin tooling).
+ * Scheduled tests filter by admin-configured days, or scheduler days when admin left them empty.
+ */
+export function resolveQuestionStudyDayFilter(
+  scheduleType: ScheduleType,
+  definitionDays: number[],
+  requestedStudyDays?: number[],
+): number[] | undefined {
+  if (scheduleType === 'manual' && !requestedStudyDays?.length) {
+    return undefined
+  }
+
+  const covered = resolveCoveredStudyDays(definitionDays, requestedStudyDays)
+  return covered.length ? covered : undefined
+}
+
 export function getCumulativeStudyDays(
   planDay: number,
   days: RoadmapDay[] = getCachedStudyPlanDays(),

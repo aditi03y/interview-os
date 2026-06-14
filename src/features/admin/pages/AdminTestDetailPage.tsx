@@ -485,6 +485,11 @@ export function AdminTestDetailPage() {
               value={definition.coveredStudyDays ?? []}
               onChange={(days) => setDefinition((d) => ({ ...d, coveredStudyDays: days }))}
             />
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {definition.scheduleType === 'manual'
+                ? 'Used for AI question generation. Manual practice tests include all questions when students start.'
+                : 'Limits which study-day-tagged questions appear on each scheduled attempt. Leave empty to use the scheduler.'}
+            </p>
           </div>
           <div className="md:col-span-2">
             <p className="mb-2 text-sm font-medium">Test sections</p>

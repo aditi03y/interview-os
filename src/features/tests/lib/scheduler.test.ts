@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { getRevisionStudyDays, resolveCoveredStudyDays } from './scheduler'
+import {
+  getRevisionStudyDays,
+  resolveCoveredStudyDays,
+  resolveQuestionStudyDayFilter,
+} from './scheduler'
 
 describe('getRevisionStudyDays', () => {
   it('returns empty before plan day 2', () => {
@@ -29,5 +33,21 @@ describe('resolveCoveredStudyDays', () => {
   it('uses scheduled days when admin left study days empty', () => {
     expect(resolveCoveredStudyDays([], [3, 4])).toEqual([3, 4])
     expect(resolveCoveredStudyDays([], [1, 2])).toEqual([1, 2])
+  })
+})
+
+describe('resolveQuestionStudyDayFilter', () => {
+  it('loads all questions for manual tests without explicit days', () => {
+    expect(resolveQuestionStudyDayFilter('manual', [1, 2])).toBeUndefined()
+    expect(resolveQuestionStudyDayFilter('manual', [3, 4], [])).toBeUndefined()
+  })
+
+  it('filters manual tests when caller passes explicit study days', () => {
+    expect(resolveQuestionStudyDayFilter('manual', [], [3, 4])).toEqual([3, 4])
+  })
+
+  it('filters scheduled tests using admin or scheduler days', () => {
+    expect(resolveQuestionStudyDayFilter('revision_2d', [1, 2], [3, 4])).toEqual([1, 2])
+    expect(resolveQuestionStudyDayFilter('revision_2d', [], [3, 4])).toEqual([3, 4])
   })
 })

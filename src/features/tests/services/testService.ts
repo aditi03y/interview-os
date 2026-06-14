@@ -4,7 +4,7 @@ import { mapPostgrestError } from '@/lib/supabase/errors'
 import type { ApiResult } from '@/types'
 import { gradeAttempt, maxPointsForQuestion } from '../lib/scoring'
 import { mapAttemptRow, mapDefinitionRow, mapQuestionRow } from '../lib/mappers'
-import { resolveCoveredStudyDays } from '../lib/scheduler'
+import { resolveCoveredStudyDays, resolveQuestionStudyDayFilter } from '../lib/scheduler'
 import { totalSectionDuration } from '../types'
 import type {
   AttemptAnswers,
@@ -141,19 +141,30 @@ export async function startAttempt(input: StartAttemptInput): Promise<ApiResult<
     }
   }
 
+  const studyDayFilter = resolveQuestionStudyDayFilter(
+    definition.scheduleType,
+    definition.coveredStudyDays ?? [],
+    requestedStudyDays,
+  )
+
   const coveredStudyDays = resolveCoveredStudyDays(
     definition.coveredStudyDays ?? [],
     requestedStudyDays,
   )
 
-  const questionsResult = await fetchQuestionsForDefinition(
-    definition.id,
-    coveredStudyDays.length ? coveredStudyDays : undefined,
-  )
+  const questionsResult = await fetchQuestionsForDefinition(definition.id, studyDayFilter)
   if (questionsResult.error || !questionsResult.data?.length) {
+    const dayHint =
+      studyDayFilter?.length && definition.scheduleType !== 'manual'
+        ? ` No questions are tagged for study day${studyDayFilter.length === 1 ? '' : 's'} ${studyDayFilter.join(', ')}.`
+        : ''
     return {
       data: null,
-      error: questionsResult.error ?? { message: 'No questions available for this test.', code: 'NO_QUESTIONS' },
+      error:
+        questionsResult.error ?? {
+          message: `No questions available for this test.${dayHint}`,
+          code: 'NO_QUESTIONS',
+        },
     }
   }
 
